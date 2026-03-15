@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super-admin';
+    }
+
+    function isCommunityAdmin(communityId) {
+      return isSignedIn() && (
+        get(/databases/$(database)/documents/communities/$(communityId)).data.admin_id == request.auth.uid ||
+        isSuperAdmin()
+      );
+    }
+
+    function isGroupLeader(groupId) {
+      return isSignedIn() && (
+        get(/databases/$(database)/documents/groups/$(groupId)).data.leader_id == request.auth.uid ||
+        isSuperAdmin()
+      );
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if request.auth.uid == userId || isSuperAdmin();
+    }
+
+    // Communities
+    match /communities/{communityId} {
+      allow read: if isSignedIn();
+      allow write: if isCommunityAdmin(communityId);
+    }
+
+    // Sub-Communities
+    match /sub_communities/{subCommunityId} {
+      allow read: if isSignedIn();
+      allow write: if isCommunityAdmin(resource.data.community_id);
+    }
+
+    // Groups
+    match /groups/{groupId} {
+      allow read: if isSignedIn();
+      allow write: if isGroupLeader(groupId);
+    }
+
+    // Members
+    match /members/{memberId} {
+      allow read: if isSignedIn();
+      allow write: if isGroupLeader(resource.data.group_id);
+      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
+    }
+
+    // Transactions
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn() && (resource.data.user_id == request.auth.uid || isGroupLeader(resource.data.group_id) || isSuperAdmin());
+      allow create: if isSignedIn() && (request.resource.data.user_id == request.auth.uid || isSuperAdmin());
+      allow update, delete: if isSuperAdmin(); 
+    }
+
+    // Global System Events & Config (Super Admin Only)
+    match /system_events/{eventId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /system_config/{configId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+  }
+}
