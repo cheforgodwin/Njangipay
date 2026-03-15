@@ -1,0 +1,351 @@
+/* App.css - Main Layout & Landing Page Styles */
+
+.app-navbar {
+  padding: 1rem 4rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--glass-border);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 1.8rem;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+  user-select: none;
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none !important;
+  white-space: nowrap;
+}
+
+.logo-icon {
+  height: 48px !important;
+  width: auto;
+  filter: drop-shadow(0 2px 4px rgba(46, 204, 113, 0.2));
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.logo:hover .logo-icon {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+/* Fallback for any remaining img logos */
+.logo img {
+  height: 40px !important;
+  width: auto;
+  filter: drop-shadow(0 2px 4px rgba(46, 204, 113, 0.15));
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.logo:hover img {
+  transform: scale(1.1) rotate(-3deg);
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.user-profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.notification-bell {
+  position: relative;
+  cursor: pointer;
+  color: var(--text-sub);
+  display: flex;
+  align-items: center;
+}
+
+.notification-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #e74c3c;
+  border-radius: 50%;
+  border: 2px solid var(--white);
+}
+
+.nav-settings-link {
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.nav-settings-link:hover {
+  transform: rotate(30deg);
+}
+
+
+.nav-links {
+  display: flex;
+  gap: 2.5rem;
+  font-weight: 500;
+  color: var(--text-sub);
+}
+
+.nav-links a:hover {
+  color: var(--primary-green);
+}
+
+/* Hero Section */
+.hero-section {
+  display: flex;
+  align-items: center;
+  gap: 5rem;
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+.hero-content {
+  flex: 1.2;
+}
+
+.hero-title {
+  font-size: 4.5rem;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+}
+
+.hero-title span {
+  color: var(--primary-green);
+}
+
+.hero-description {
+  font-size: 1.25rem;
+  max-width: 520px;
+  margin: 1.5rem 0;
+  line-height: 1.6;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
+.hero-visual {
+  flex: 1;
+  position: relative;
+}
+
+.hero-image-container {
+  width: 100%;
+  height: 480px;
+  background-size: cover;
+  background-position: center;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+}
+
+
+
+.balance-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.balance-value {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0.5rem 0;
+}
+
+.balance-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.progress-bar-bg {
+  height: 6px;
+  flex: 1;
+  background: #eee;
+  border-radius: 3px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--primary-green);
+  border-radius: 3px;
+}
+
+/* Trust Badges */
+.trust-badges {
+  display: flex;
+  justify-content: center;
+  gap: 4rem;
+  margin-top: 3rem;
+  opacity: 0.7;
+}
+
+/* Stats Section */
+.stats-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  margin-top: 6rem;
+}
+
+.stat-card {
+  text-align: left;
+}
+
+.stat-icon {
+  background: var(--accent-light);
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.stat-number {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Quick Links CTA */
+.quick-links-section {
+  text-align: center;
+  margin-top: 8rem;
+  padding-bottom: 6rem;
+}
+
+.quick-links-grid {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  margin-top: 3rem;
+}
+
+.quick-link-card {
+  padding: 1.5rem 2.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.quick-link-card:hover {
+  background: var(--accent-light);
+  border-color: var(--primary-green);
+}
+
+/* AI Assistant Polish */
+.typing-indicator {
+  display: inline-block;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--primary-dark);
+  animation: typingPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes typingPulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+.ai-trigger:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 15px 35px rgba(39, 174, 96, 0.5);
+}
+
+.ai-chat-container {
+  animation: slideInUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ai-messages-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.ai-messages-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ai-messages-list::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .hero-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 3rem;
+    padding-top: 2rem;
+  }
+  
+  .hero-title { font-size: 3rem; }
+  .hero-description { margin: 1.5rem auto; font-size: 1.1rem; }
+  .hero-actions { justify-content: center; flex-direction: column; width: 100%; max-width: 400px; margin: 2rem auto 0; }
+  .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; }
+  
+  .app-navbar { padding: 1rem 1.5rem; }
+  .nav-links { display: none; }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    margin-top: 4rem;
+  }
+  
+  .trust-badges {
+    flex-wrap: wrap;
+    gap: 2rem;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-title { font-size: 2.5rem; }
+  
+  .logo-icon { height: 36px !important; }
+  .logo { font-size: 1.4rem; }
+  
+  .auth-wrapper {
+    padding: 1rem;
+  }
+  
+  .auth-card {
+    padding: 2rem 1.5rem;
+  }
+  
+  .quick-links-grid {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .quick-link-card {
+    width: 100%;
+    max-width: 300px;
+    justify-content: center;
+  }
+}
