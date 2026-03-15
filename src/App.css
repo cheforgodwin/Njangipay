@@ -303,7 +303,7 @@
     padding-top: 2rem;
   }
   
-  .hero-title { font-size: 3rem; }
+  .hero-title { font-size: 3.5rem; }
   .hero-description { margin: 1.5rem auto; font-size: 1.1rem; }
   .hero-actions { justify-content: center; flex-direction: column; width: 100%; max-width: 400px; margin: 2rem auto 0; }
   .hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; }
@@ -326,6 +326,7 @@
 
 @media (max-width: 768px) {
   .hero-title { font-size: 2.5rem; }
+  .hero-image-container { height: 350px; }
   
   .logo-icon { height: 36px !important; }
   .logo { font-size: 1.4rem; }
@@ -347,5 +348,19 @@
     width: 100%;
     max-width: 300px;
     justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title { font-size: 2rem; }
+  .hero-description { font-size: 1rem; }
+  .hero-image-container { height: 250px; }
+  .app-navbar { padding: 0.8rem 1rem; }
+  .logo-icon { height: 28px !important; }
+  .logo { font-size: 1.2rem; }
+  .user-profile-actions { gap: 0.8rem; }
+  
+  .auth-card {
+    padding: 1.5rem 1rem;
   }
 }
