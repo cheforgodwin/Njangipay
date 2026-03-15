@@ -11,7 +11,9 @@ import {
 import Navbar from './Navbar';
 import FeaturesSection from './FeaturesSection';
 
-const HERO_BG = "/njangipay_hero_bg.png";
+import heroBg from '../assets/njangipay_hero_bg.png';
+
+const HERO_BG = heroBg;
 
 const LandingPage = ({ theme, toggleTheme }) => {
   const navigate = useNavigate();
