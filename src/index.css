@@ -171,3 +171,28 @@ a {
   transform: translateY(-5px);
   box-shadow: var(--shadow-lg);
 }
+
+/* Mobile Responsiveness for Global Styles */
+@media (max-width: 768px) {
+  h1 { font-size: 2.5rem; }
+  h2 { font-size: 2rem; }
+  h3 { font-size: 1.25rem; }
+  
+  .container {
+    padding: 0 1rem;
+  }
+  
+  .card {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.75rem; }
+  
+  .btn-primary, .btn-secondary {
+    padding: 0.8rem 1.2rem;
+    font-size: 0.95rem;
+  }
+}
