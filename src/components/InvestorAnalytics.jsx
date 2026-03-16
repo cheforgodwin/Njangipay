@@ -142,11 +142,20 @@ const InvestorAnalytics = ({ theme, toggleTheme }) => {
                 ))}
              </div>
 
-             <div className="flex gap-2" style={{ marginTop: '3rem', padding: '20px', background: 'var(--accent-light)', borderRadius: '15px' }}>
-                <BarChart4 color="var(--primary-green)" />
-                <p style={{ fontSize: '0.9rem', margin: 0, lineHeight: '1.5' }}>
-                   AI predictive models suggest a <span style={{ color: 'var(--primary-green)', fontWeight: '700' }}>+2.1% increase</span> in yield if capital is reallocated to verified sub-communities in Yaoundé.
-                </p>
+             <div className="flex-between" style={{ marginTop: '3rem', marginBottom: '1.5rem' }}>
+                <h3 style={{ margin: 0 }}>Cluster Performance</h3>
+             </div>
+             <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                <div style={{ padding: '15px', background: 'var(--off-white)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                   <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '5px' }}>Top Branch</p>
+                   <p style={{ fontWeight: '700', margin: 0 }}>Yaoundé - Central</p>
+                   <p style={{ color: 'var(--primary-green)', fontSize: '0.8rem' }}>+12.4% MoM</p>
+                </div>
+                <div style={{ padding: '15px', background: 'var(--off-white)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                   <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '5px' }}>Emerging Hub</p>
+                   <p style={{ fontWeight: '700', margin: 0 }}>Douala North</p>
+                   <p style={{ color: 'var(--primary-green)', fontSize: '0.8rem' }}>+8.2% MoM</p>
+                </div>
              </div>
           </div>
 

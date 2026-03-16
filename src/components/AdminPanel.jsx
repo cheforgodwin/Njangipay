@@ -21,6 +21,7 @@ const AdminPanel = ({ theme, toggleTheme }) => {
   const location = useLocation();
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [subGroups, setSubGroups] = useState([]);
 
   useEffect(() => {
     const q = query(collection(db, "communities"));
@@ -39,6 +40,15 @@ const AdminPanel = ({ theme, toggleTheme }) => {
     });
 
     return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    // Listen for groups to show hierarchy
+    const qGroups = query(collection(db, "groups"));
+    const unsubscribeGroups = onSnapshot(qGroups, (snapshot) => {
+      setSubGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribeGroups();
   }, []);
 
   const handleAddBranch = async () => {
@@ -65,8 +75,8 @@ const AdminPanel = ({ theme, toggleTheme }) => {
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
       <header className="dashboard-header">
         <div>
-          <h1>Community Admin Panel</h1>
-          <p className="text-sub">Manage your sub-communities and branches across the platform.</p>
+          <h1>Branch Intelligence Center</h1>
+          <p className="text-sub">Manage your sub-communities and hierarchical savings groups.</p>
         </div>
         <button className="btn-primary" onClick={handleAddBranch}>
           <Plus size={20} /> Add New Branch
@@ -77,19 +87,36 @@ const AdminPanel = ({ theme, toggleTheme }) => {
         {loading ? (
              <div className="flex-center" style={{ gridColumn: '1/-1', height: '300px' }}>Loading clusters...</div>
         ) : communities.map((community) => (
-          <div key={community.id} className="glass card flex" style={{ flexDirection: 'column' }}>
-            <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+          <div key={community.id} className="glass card flex" style={{ flexDirection: 'column', gap: '1rem' }}>
+            <div className="flex-between">
               <div className="stat-icon" style={{ margin: 0 }}>
                 {community.type === 'global' ? <Globe color="var(--primary-green)" size={24} /> : <MapPin color="var(--primary-green)" size={24} />}
               </div>
               <span className="status-pill status-paid">{community.status || 'Active'}</span>
             </div>
-            <h3 style={{ marginBottom: '0.5rem' }}>{community.name}</h3>
-            <p className="text-sub" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>{community.description}</p>
-            <div className="flex gap-1" style={{ alignItems: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-               <Users size={16} /> {community.members?.toLocaleString() || 0} Members
+            
+            <div>
+              <h3 style={{ marginBottom: '0.25rem' }}>{community.name}</h3>
+              <p className="text-sub" style={{ fontSize: '0.85rem' }}>{community.description}</p>
             </div>
-            <button className="btn-secondary" style={{ marginTop: 'auto', width: '100%' }}>Manage Branch</button>
+
+            <div style={{ padding: '1rem', background: 'var(--accent-light)', borderRadius: '12px' }}>
+               <p style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px' }}>Active Groups</p>
+               <div className="flex-column" style={{ gap: '8px' }}>
+                  {subGroups.filter(g => g.type === 'public' || community.type === 'global').slice(0, 3).map(group => (
+                    <div key={group.id} className="flex-between" style={{ fontSize: '0.85rem' }}>
+                       <span>{group.name}</span>
+                       <span style={{ fontWeight: 600 }}>{group.members || 0} mem.</span>
+                    </div>
+                  ))}
+                  {subGroups.length === 0 && <span className="text-muted" style={{ fontSize: '0.8rem' }}>No groups linked yet.</span>}
+               </div>
+            </div>
+
+            <div className="flex-between" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 'auto' }}>
+               <div className="flex gap-1"><Users size={16} /> {community.members?.toLocaleString() || 0} Total</div>
+               <button className="btn-secondary" style={{ padding: '5px 15px' }}>Manage</button>
+            </div>
           </div>
         ))}
         

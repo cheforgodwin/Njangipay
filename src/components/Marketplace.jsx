@@ -40,6 +40,7 @@ const Marketplace = ({ theme, toggleTheme }) => {
   const { currentUser, getUserDisplayName } = useAuth();
   const [userBalance, setUserBalance] = useState(0);
   const [userDocId, setUserDocId] = useState(null);
+  const [userRiskScore, setUserRiskScore] = useState(0.85);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -50,6 +51,14 @@ const Marketplace = ({ theme, toggleTheme }) => {
       if (!snapshot.empty) {
         setUserBalance(snapshot.docs[0].data().balance || 0);
         setUserDocId(snapshot.docs[0].id);
+      }
+    });
+
+    // 1.5 Fetch user risk score from members record
+    const riskQuery = query(collection(db, "members"), where("user_id", "==", currentUser.uid), limit(1));
+    const unsubscribeRisk = onSnapshot(riskQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        setUserRiskScore(snapshot.docs[0].data().aiRiskScore || 0.85);
       }
     });
 
@@ -69,6 +78,7 @@ const Marketplace = ({ theme, toggleTheme }) => {
 
     return () => {
       unsubscribeUser();
+      unsubscribeRisk();
       unsubscribeLoans();
     };
   }, [currentUser]);
@@ -85,7 +95,7 @@ const Marketplace = ({ theme, toggleTheme }) => {
         duration: newLoan.duration,
         interest: newLoan.interest,
         purpose: newLoan.purpose,
-        aiScore: 0.85, // Default for demo, usually calculated from member record
+        aiScore: userRiskScore, 
         timestamp: serverTimestamp(),
         status: 'open'
       });

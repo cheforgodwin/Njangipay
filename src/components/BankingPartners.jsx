@@ -3,6 +3,8 @@ import { Building2, Globe, ShieldCheck, CreditCard, Landmark, Banknote } from 'l
 import MainLayout from './MainLayout';
 
 const BankingPartners = ({ theme, toggleTheme }) => {
+  const [linkedBanks, setLinkedBanks] = React.useState(new Set());
+
   const partners = [
     {
       name: 'Ecobank',
@@ -48,6 +50,17 @@ const BankingPartners = ({ theme, toggleTheme }) => {
     }
   ];
 
+  const toggleLink = (bankName) => {
+    const newLinked = new Set(linkedBanks);
+    if (newLinked.has(bankName)) {
+      newLinked.delete(bankName);
+    } else {
+      newLinked.add(bankName);
+    }
+    setLinkedBanks(newLinked);
+    // In a real app, this would update the user document in Firestore
+  };
+
   return (
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
       <div className="partners-page">
@@ -72,11 +85,11 @@ const BankingPartners = ({ theme, toggleTheme }) => {
           flexDirection: 'column',
           gap: '1rem'
         }}>
-          <h2 style={{ color: 'var(--primary-green)', fontWeight: '700' }}>Our Trusted Banking Partners</h2>
+          <h2 style={{ color: 'var(--primary-green)', fontWeight: '700' }}>Secure Digital Banking</h2>
           <p style={{ color: 'var(--text-main)', lineHeight: '1.6', maxWidth: '800px' }}>
-            NjangiPay partners with leading financial institutions to provide you with the most secure, 
-            reliable, and efficient financial management experience. Our integration with these 
-            partners allows for instant deposits, withdrawals, and real-time transaction monitoring.
+            Connect your existing bank accounts for seamless deposits and withdrawals. NjangiPay 
+            integrates with major regional banks to facilitate automated group contributions and 
+            private wallet management.
           </p>
         </section>
 
@@ -86,13 +99,12 @@ const BankingPartners = ({ theme, toggleTheme }) => {
               background: 'var(--white)',
               borderRadius: 'var(--radius-md)',
               padding: '2rem',
-              border: '1px solid var(--glass-border)',
+              border: linkedBanks.has(bank.name) ? '2px solid var(--primary-green)' : '1px solid var(--glass-border)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               textAlign: 'center',
               transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-              cursor: 'pointer',
               position: 'relative',
               overflow: 'hidden'
             }}>
@@ -115,16 +127,13 @@ const BankingPartners = ({ theme, toggleTheme }) => {
               <p style={{ color: 'var(--text-sub)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                 {bank.description}
               </p>
-              <div style={{
-                marginTop: 'auto',
-                fontSize: '0.8rem',
-                fontWeight: '700',
-                textTransform: 'uppercase',
-                color: bank.color,
-                letterSpacing: '0.5px'
-              }}>
-                Verified Partner
-              </div>
+              <button 
+                className={linkedBanks.has(bank.name) ? "btn-secondary" : "btn-primary"}
+                onClick={() => toggleLink(bank.name)}
+                style={{ marginTop: 'auto', width: '100%', justifyContent: 'center' }}
+              >
+                {linkedBanks.has(bank.name) ? 'Disconnect' : 'Connect Account'}
+              </button>
             </div>
           ))}
         </div>

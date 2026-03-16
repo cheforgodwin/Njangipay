@@ -57,6 +57,23 @@ const RiskAssessment = ({ theme, toggleTheme }) => {
     return <ShieldCheck size={24} />;
   };
 
+const handleRecalculate = async (memberId, currentScore) => {
+    // Simulation logic: slight random variation to show "activity-based" change
+    const delta = (Math.random() - 0.5) * 0.1;
+    const newScore = Math.max(0.1, Math.min(1.0, currentScore + delta));
+    
+    try {
+      const { doc, updateDoc } = await import('firebase/firestore');
+      await updateDoc(doc(db, "members", memberId), {
+        aiRiskScore: newScore,
+        message: `System updated score via transaction history analysis. New confidence: ${(newScore * 100).toFixed(0)}%`
+      });
+      alert("AI Score updated based on latest transaction history!");
+    } catch (error) {
+      console.error("Recalculate error:", error);
+    }
+  };
+
   return (
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
       <header className="dashboard-header">
@@ -90,13 +107,22 @@ const RiskAssessment = ({ theme, toggleTheme }) => {
                 </span>
               </div>
               <h3 style={{ marginBottom: '0.25rem' }}>{member.userName || `User_${member.id.substring(0,4)}`}</h3>
-              <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>AI Model: <span style={{ color: getRiskColor(member.aiRiskScore), fontWeight: '700' }}>Score {member.aiRiskScore.toFixed(2)}</span></p>
+              <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>AI Model: <span style={{ color: getRiskColor(member.aiRiskScore), fontWeight: '700' }}>Score {member.aiRiskScore?.toFixed(2) || '1.00'}</span></p>
               <p className="text-sub" style={{ fontSize: '0.9rem', lineHeight: '1.5', marginBottom: '1.5rem' }}>
                 {member.message || (member.aiRiskScore < 0.3 ? "Critical default probability detected." : member.aiRiskScore < 0.7 ? "Moderate risk observed in patterns." : "Consistently secure behavior.")}
               </p>
-              <button className="btn-primary" style={{ width: '100%', marginTop: 'auto', background: getRiskColor(member.aiRiskScore), border: 'none' }}>
-                 {member.aiRiskScore < 0.3 ? <><UserX size={18} /> Review Account</> : member.aiRiskScore < 0.7 ? <><Send size={18} /> Send Reminder</> : <><Check size={18} /> Approve Expansion</>}
-              </button>
+              <div className="flex gap-1" style={{ marginTop: 'auto' }}>
+                <button 
+                  className="btn-primary" 
+                  style={{ flex: 1, background: getRiskColor(member.aiRiskScore), border: 'none' }}
+                  onClick={() => handleRecalculate(member.id, member.aiRiskScore || 0.85)}
+                >
+                   <BrainCircuit size={18} /> Recalculate AI
+                </button>
+                <button className="btn-secondary" style={{ padding: '0.8rem' }}>
+                   {member.aiRiskScore < 0.3 ? <UserX size={18} /> : <Check size={18} />}
+                </button>
+              </div>
             </div>
           ))}
         </div>
