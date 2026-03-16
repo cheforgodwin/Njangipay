@@ -100,9 +100,15 @@ const InvestorAnalytics = ({ theme, toggleTheme }) => {
             <h1>Investor Intelligence</h1>
             <p className="text-sub">Advanced analytics for your platform-wide capital allocation.</p>
           </div>
-          <button className="btn-primary">
-            Refactor Allocation
-          </button>
+          <button className="btn-primary" onClick={() => {
+            const lowRisk = prompt("Low Risk allocation % (current: 65%):", "65");
+            const midRisk = prompt("Medium Risk allocation % (current: 25%):", "25");
+            if (lowRisk && midRisk) {
+              alert(`Capital reallocated!\nLow Risk: ${lowRisk}%\nMedium Risk: ${midRisk}%\nHigh Yield: ${100 - parseInt(lowRisk) - parseInt(midRisk)}%`);
+            }
+          }}>
+          Refactor Allocation
+        </button>
         </header>
 
         <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '2rem' }}>

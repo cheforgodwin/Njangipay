@@ -1,18 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Building, 
-  Globe, 
-  MapPin, 
-  Plus, 
-  LayoutDashboard,
-  Wallet,
-  Users,
-  Target,
-  Shield,
-  MessageSquare
+  Building, Globe, MapPin, Plus, Users, X
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { collection, query, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import MainLayout from './MainLayout';
 import './Dashboard.css';
@@ -22,6 +13,8 @@ const AdminPanel = ({ theme, toggleTheme }) => {
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [subGroups, setSubGroups] = useState([]);
+  const [selectedCommunity, setSelectedCommunity] = useState(null);
+  const [editDesc, setEditDesc] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, "communities"));
@@ -68,10 +61,36 @@ const AdminPanel = ({ theme, toggleTheme }) => {
     } catch (error) {
       console.error("Add branch error:", error);
       alert("Failed to add branch.");
+    };
+  };
+
+  const handleManage = (community) => {
+    setSelectedCommunity(community);
+    setEditDesc(community.description || '');
+  };
+
+  const handleSaveManage = async () => {
+    if (!selectedCommunity) return;
+    try {
+      // Only update real docs (not demo placeholders like id '1', '2')
+      if (!selectedCommunity.id.startsWith('demo-')) {
+        await updateDoc(doc(db, "communities", selectedCommunity.id), {
+          description: editDesc,
+          status: 'Active'
+        });
+      }
+      setCommunities(cs => cs.map(c => c.id === selectedCommunity.id ? { ...c, description: editDesc } : c));
+      setSelectedCommunity(null);
+      alert('Branch updated successfully!');
+    } catch (e) {
+      console.error(e);
+      alert('Could not update. (Demo data cannot be persisted)');
+      setSelectedCommunity(null);
     }
   };
 
   return (
+    <>
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
       <header className="dashboard-header">
         <div>
@@ -115,7 +134,7 @@ const AdminPanel = ({ theme, toggleTheme }) => {
 
             <div className="flex-between" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 'auto' }}>
                <div className="flex gap-1"><Users size={16} /> {community.members?.toLocaleString() || 0} Total</div>
-               <button className="btn-secondary" style={{ padding: '5px 15px' }}>Manage</button>
+               <button className="btn-secondary" style={{ padding: '5px 15px' }} onClick={() => handleManage(community)}>Manage</button>
             </div>
           </div>
         ))}
@@ -132,6 +151,36 @@ const AdminPanel = ({ theme, toggleTheme }) => {
         </div>
       </div>
     </MainLayout>
+
+    {selectedCommunity && (
+      <div className="modal-overlay">
+        <div className="glass modal-content">
+          <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+            <h2>Manage: {selectedCommunity.name}</h2>
+            <button onClick={() => setSelectedCommunity(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+          </div>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Branch Description</label>
+          <textarea 
+            value={editDesc}
+            onChange={e => setEditDesc(e.target.value)}
+            rows={4}
+            style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--glass-border)', resize: 'vertical' }}
+          />
+          <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--accent-light)', borderRadius: '10px' }}>
+            <p style={{ margin: 0, fontSize: '0.85rem' }}>
+              <strong>Members:</strong> {selectedCommunity.members || 0} &nbsp;|&nbsp;
+              <strong>Status:</strong> {selectedCommunity.status || 'Active'} &nbsp;|&nbsp;
+              <strong>Type:</strong> {selectedCommunity.type || 'local'}
+            </p>
+          </div>
+          <div className="flex gap-1" style={{ marginTop: '1.5rem' }}>
+            <button onClick={() => setSelectedCommunity(null)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+            <button onClick={handleSaveManage} className="btn-primary" style={{ flex: 1 }}>Save Changes</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

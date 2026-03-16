@@ -203,7 +203,7 @@ const SupportDashboard = ({ theme, toggleTheme }) => {
             <div className="glass card flex-center" style={{ flexDirection: 'column', gap: '1rem', border: '1px dashed var(--glass-border)' }}>
                <HelpCircle size={40} color="var(--text-muted)" />
                <p style={{ textAlign: 'center', margin: 0, fontWeight: '600' }}>Need Platform Help?</p>
-               <button className="btn-secondary" style={{ width: '100%' }}>Internal Documentation</button>
+               <button className="btn-secondary" style={{ width: '100%' }} onClick={() => window.open('https://firebase.google.com/docs/firestore', '_blank')}>Internal Documentation</button>
             </div>
           </div>
         </div>
