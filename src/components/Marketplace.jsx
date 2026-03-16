@@ -17,8 +17,10 @@ import {
   Moon
 } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { collection, query, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { useAuth } from '../context/AuthContext';
+import MainLayout from './MainLayout';
+import { collection, query, onSnapshot, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc, increment, where, getDocs } from 'firebase/firestore';
 import './Dashboard.css';
 
 const Marketplace = ({ theme, toggleTheme }) => {
@@ -28,29 +30,119 @@ const Marketplace = ({ theme, toggleTheme }) => {
 
   const [loanRequests, setLoanRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showLoanModal, setShowLoanModal] = useState(false);
+  const [newLoan, setNewLoan] = useState({
+    amount: '',
+    duration: '3 Months',
+    purpose: '',
+    interest: '5%'
+  });
+  const { currentUser, getUserDisplayName } = useAuth();
+  const [userBalance, setUserBalance] = useState(0);
+  const [userDocId, setUserDocId] = useState(null);
 
   useEffect(() => {
-    // Listen for loan requests
+    if (!currentUser) return;
+
+    // 1. Listen for user balance (needed for funding check)
+    const userQuery = query(collection(db, "users"), where("uid", "==", currentUser.uid));
+    const unsubscribeUser = onSnapshot(userQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        setUserBalance(snapshot.docs[0].data().balance || 0);
+        setUserDocId(snapshot.docs[0].id);
+      }
+    });
+
+    // 2. Listen for loan requests
     const q = query(collection(db, "loan_requests"), orderBy("timestamp", "desc"), limit(10));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeLoans = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         setLoanRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } else {
-        // Fallback to mock data if collection is empty
         setLoanRequests([
-          { id: 'lr-1', user: 'Samuel K.', amount: '250,000 XAF', interest: '5%', duration: '3 Months', risk: 'Low', aiScore: 0.95 },
-          { id: 'lr-2', user: 'Fiona B.', amount: '1,000,000 XAF', interest: '8%', duration: '12 Months', risk: 'Medium', aiScore: 0.72 },
-          { id: 'lr-3', user: 'Divine T.', amount: '150,000 XAF', interest: '4%', duration: '2 Months', risk: 'Low', aiScore: 0.98 },
+          { id: 'lr-1', user: 'Samuel K.', amount: 250000, interest: '5%', duration: '3 Months', risk: 'Low', aiScore: 0.95 },
+          { id: 'lr-2', user: 'Fiona B.', amount: 1000000, interest: '8%', duration: '12 Months', risk: 'Medium', aiScore: 0.72 },
         ]);
       }
       setLoading(false);
-    }, (error) => {
-       console.warn("Marketplace listen error:", error);
-       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      unsubscribeUser();
+      unsubscribeLoans();
+    };
+  }, [currentUser]);
+
+  const handlePostLoan = async (e) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    
+    try {
+      await addDoc(collection(db, "loan_requests"), {
+        user_id: currentUser.uid,
+        user: getUserDisplayName(),
+        amount: parseFloat(newLoan.amount),
+        duration: newLoan.duration,
+        interest: newLoan.interest,
+        purpose: newLoan.purpose,
+        aiScore: 0.85, // Default for demo, usually calculated from member record
+        timestamp: serverTimestamp(),
+        status: 'open'
+      });
+      
+      setShowLoanModal(false);
+      setNewLoan({ amount: '', duration: '3 Months', purpose: '', interest: '5%' });
+      alert("Loan request posted to marketplace!");
+    } catch (error) {
+      console.error("Post loan error:", error);
+      alert("Failed to post loan request.");
+    }
+  };
+
+  const handleFundLoan = async (loan) => {
+    if (!currentUser || !userDocId) return;
+    
+    if (loan.user_id === currentUser.uid) {
+      alert("You cannot fund your own loan request.");
+      return;
+    }
+
+    if (userBalance < loan.amount) {
+      alert("Insufficient balance to fund this loan.");
+      return;
+    }
+
+    const confirm = window.confirm(`Are you sure you want to fund ${loan.user}'s request for ${loan.amount.toLocaleString()} XAF?`);
+    if (!confirm) return;
+
+    try {
+      // 1. Deduct from funder
+      await updateDoc(doc(db, "users", userDocId), {
+        balance: increment(-loan.amount)
+      });
+
+      // 2. Log transaction for funder
+      await addDoc(collection(db, "transactions"), {
+        user_id: currentUser.uid,
+        amount: loan.amount,
+        type: "loan_funding",
+        title: `Funded Loan for ${loan.user}`,
+        timestamp: serverTimestamp(),
+        status: "completed"
+      });
+
+      // 3. Close the request (or update status)
+      await updateDoc(doc(db, "loan_requests", loan.id), {
+        status: 'funded',
+        fundedBy: currentUser.uid
+      });
+
+      alert("Transaction Successful! You have funded this loan.");
+    } catch (error) {
+      console.error("Funding error:", error);
+      alert("Failed to fund loan. Please try again.");
+    }
+  };
 
   return (
     <div className="sidebar-layout">
@@ -88,10 +180,74 @@ const Marketplace = ({ theme, toggleTheme }) => {
             <p className="text-sub">Fund community requests and earn competitive returns.</p>
           </div>
           <div className="flex gap-1">
-             <button className="btn-secondary">My Requests</button>
-             <button className="btn-primary">Post Loan Request</button>
+             <button className="btn-secondary" onClick={() => navigate('/wallet')}>My Portfolio</button>
+             <button className="btn-primary" onClick={() => setShowLoanModal(true)}>Post Loan Request</button>
           </div>
         </header>
+
+        {showLoanModal && (
+          <div className="modal-overlay">
+            <div className="glass modal-content">
+              <h2>Post Loan Request</h2>
+              <form onSubmit={handlePostLoan} style={{ marginTop: '20px' }}>
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px' }}>Amount (XAF)</label>
+                  <input 
+                    type="number" 
+                    value={newLoan.amount} 
+                    onChange={(e) => setNewLoan({...newLoan, amount: e.target.value})}
+                    required 
+                    placeholder="500,000"
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px' }}>Purpose of Loan</label>
+                  <input 
+                    type="text" 
+                    value={newLoan.purpose} 
+                    onChange={(e) => setNewLoan({...newLoan, purpose: e.target.value})}
+                    required 
+                    placeholder="e.g. Agricultural Equipment"
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '8px' }}>Duration</label>
+                    <select 
+                      value={newLoan.duration}
+                      onChange={(e) => setNewLoan({...newLoan, duration: e.target.value})}
+                      style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                    >
+                      <option>1 Month</option>
+                      <option>3 Months</option>
+                      <option>6 Months</option>
+                      <option>12 Months</option>
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '8px' }}>Interest Rate</label>
+                    <select 
+                      value={newLoan.interest}
+                      onChange={(e) => setNewLoan({...newLoan, interest: e.target.value})}
+                      style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                    >
+                      <option>3%</option>
+                      <option>5%</option>
+                      <option>8%</option>
+                      <option>10%</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-1" style={{ marginTop: '30px' }}>
+                  <button type="button" onClick={() => setShowLoanModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                  <button type="submit" className="btn-primary" style={{ flex: 1 }}>Post to Market</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         <div className="activity-grid" style={{ gridTemplateColumns: '1.8fr 1fr' }}>
           <div>
@@ -155,8 +311,13 @@ const Marketplace = ({ theme, toggleTheme }) => {
                      </div>
 
                      <div className="flex gap-1" style={{ marginTop: '1.5rem' }}>
-                        <button className="btn-primary" style={{ flex: 2 }}>
-                           Fund Loan <ArrowUpRight size={18} />
+                        <button 
+                          className="btn-primary" 
+                          style={{ flex: 2 }} 
+                          onClick={() => handleFundLoan(req)}
+                          disabled={req.status === 'funded'}
+                        >
+                           {req.status === 'funded' ? 'Funded' : 'Fund Loan'} <ArrowUpRight size={18} />
                         </button>
                         <button className="btn-secondary" style={{ flex: 1 }}>Details</button>
                      </div>
