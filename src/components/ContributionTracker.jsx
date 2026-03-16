@@ -7,7 +7,7 @@ import {
   CheckCircle, 
   Clock
 } from 'lucide-react';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from './MainLayout';
@@ -23,6 +23,19 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
   const [activeTab, setActiveTab] = useState('ledger'); // 'ledger', 'analytics', 'chat'
   const [groupDetails, setGroupDetails] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState('member'); // 'member', 'treasurer', 'president'
+
+  const handleMarkAsPaid = async (transactionId) => {
+    try {
+      const { doc, updateDoc } = await import('firebase/firestore');
+      await updateDoc(doc(db, "transactions", transactionId), {
+        status: 'Paid'
+      });
+      alert("Contribution verified and approved!");
+    } catch (error) {
+      console.error("Approval error:", error);
+    }
+  };
 
   useEffect(() => {
     if (!groupId) return;
@@ -55,11 +68,28 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
       setLoading(false);
     });
 
+    // 3. Fetch user's role in this specific group
+    let unsubscribeRole = () => {};
+    if (currentUser && groupId) {
+      const roleQuery = query(
+        collection(db, "members"), 
+        where("group_id", "==", groupId),
+        where("user_id", "==", currentUser.uid),
+        limit(1)
+      );
+      unsubscribeRole = onSnapshot(roleQuery, (snapshot) => {
+        if (!snapshot.empty) {
+          setUserRole(snapshot.docs[0].data().role || 'member');
+        }
+      });
+    }
+
     return () => {
       unsubscribeGroup();
       unsubscribeTrans();
+      unsubscribeRole();
     };
-  }, [groupId]);
+  }, [groupId, currentUser]);
 
   return (
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
@@ -140,7 +170,18 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
                           </span>
                         </td>
                         <td className="text-muted" style={{ fontSize: '0.85rem' }}>
-                          {item.timestamp?.toDate ? item.timestamp.toDate().toLocaleDateString() : 'Recent'}
+                          <div className="flex-between">
+                            {item.timestamp?.toDate ? item.timestamp.toDate().toLocaleDateString() : 'Recent'}
+                            {userRole === 'treasurer' && item.status === 'Pending' && (
+                              <button 
+                                onClick={() => handleMarkAsPaid(item.id)}
+                                className="btn-primary" 
+                                style={{ padding: '4px 10px', fontSize: '0.7rem' }}
+                              >
+                                Approve
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )) : (
@@ -155,11 +196,46 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
               </div>
             </div>
           ) : (
-            <div className="glass card flex-center" style={{ height: '400px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <PieChart size={48} color="var(--primary-green)" style={{ marginBottom: '1rem' }} />
-                <h3>Analytics Coming Soon</h3>
-                <p className="text-muted">We're building advanced insights for your group.</p>
+            <div className="analytics-view flex-column" style={{ gap: '2rem' }}>
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                <div className="glass card">
+                  <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Total Group Fund</p>
+                  <h2 style={{ color: 'var(--primary-green)' }}>
+                    {contributions.reduce((acc, curr) => acc + (curr.amount || 0), 0).toLocaleString()} XAF
+                  </h2>
+                </div>
+                <div className="glass card">
+                  <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Punctuality Rate</p>
+                  <h2 style={{ color: '#f39c12' }}>
+                    {contributions.length > 0 
+                      ? Math.round((contributions.filter(c => c.status === 'Paid').length / contributions.length) * 100) 
+                      : 0}%
+                  </h2>
+                </div>
+                <div className="glass card">
+                  <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Total Transactions</p>
+                  <h2>{contributions.length}</h2>
+                </div>
+              </div>
+
+              <div className="glass card">
+                <h3 style={{ marginBottom: '1.5rem' }}>Contribution Distribution</h3>
+                <div className="distribution-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {Object.entries(
+                    contributions.reduce((acc, curr) => {
+                      acc[curr.userName || 'Unknown'] = (acc[curr.userName || 'Unknown'] || 0) + (curr.amount || 0);
+                      return acc;
+                    }, {})
+                  )
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([name, amount], idx) => (
+                    <div key={idx} className="flex-between" style={{ padding: '0.5rem 0', borderBottom: '1px solid var(--glass-border)' }}>
+                      <span style={{ fontWeight: 500 }}>{name}</span>
+                      <span style={{ fontWeight: 700 }}>{amount.toLocaleString()} XAF</span>
+                    </div>
+                  ))}
+                  {contributions.length === 0 && <p className="text-muted flex-center" style={{ padding: '2rem' }}>No data to aggregate.</p>}
+                </div>
               </div>
             </div>
           )}

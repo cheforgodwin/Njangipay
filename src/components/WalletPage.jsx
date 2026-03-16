@@ -21,8 +21,46 @@ const WalletPage = ({ theme, toggleTheme }) => {
   const [userDocId, setUserDocId] = useState(null);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [amount, setAmount] = useState('');
   const [recipientId, setRecipientId] = useState('');
+  const [recipientBank, setRecipientBank] = useState('Ecobank');
+
+  const handleWithdraw = async (e) => {
+    e.preventDefault();
+    if (!userDocId || !amount) return;
+    const withdrawAmount = parseFloat(amount.replace(/,/g, ''));
+
+    if (withdrawAmount > balance) {
+      alert("Insufficient funds for withdrawal.");
+      return;
+    }
+
+    try {
+      // 1. Log transaction
+      await addDoc(collection(db, "transactions"), {
+        user_id: currentUser.uid,
+        amount: withdrawAmount,
+        type: "withdrawal",
+        title: `Withdraw to ${recipientBank}`,
+        timestamp: serverTimestamp(),
+        status: "completed"
+      });
+
+      // 2. Update balance
+      const userRef = doc(db, "users", userDocId);
+      await updateDoc(userRef, {
+        balance: increment(-withdrawAmount)
+      });
+
+      setShowWithdrawModal(false);
+      setAmount('');
+      alert(`Success! ${withdrawAmount.toLocaleString()} XAF sent to your ${recipientBank} account.`);
+    } catch (error) {
+      console.error("Withdrawal error:", error);
+      alert("Withdrawal failed.");
+    }
+  };
 
   useEffect(() => {
     if (!currentUser) return;
@@ -134,6 +172,7 @@ const WalletPage = ({ theme, toggleTheme }) => {
         </div>
         <div className="flex gap-1">
             <button className="btn-secondary" onClick={() => window.print()}><Download size={18} /> Export CSV</button>
+            <button className="btn-secondary" onClick={() => setShowWithdrawModal(true)} style={{ background: '#fdedec', color: '#e74c3c' }}><ArrowUpRight size={18} /> Withdraw</button>
             <button className="btn-primary" onClick={() => setShowDepositModal(true)}><Plus size={18} /> Add Funds</button>
         </div>
       </header>
@@ -192,6 +231,43 @@ const WalletPage = ({ theme, toggleTheme }) => {
               <div className="flex gap-1">
                 <button type="button" onClick={() => setShowTransferModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
                 <button type="submit" className="btn-primary" style={{ flex: 1 }}>Send XAF</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showWithdrawModal && (
+        <div className="modal-overlay">
+          <div className="glass modal-content">
+            <h2>Withdraw to Bank</h2>
+            <form onSubmit={handleWithdraw} style={{ marginTop: '20px' }}>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Select Partner Bank</label>
+                <select 
+                  value={recipientBank}
+                  onChange={(e) => setRecipientBank(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                >
+                  <option>Ecobank</option>
+                  <option>SCB Cameroon</option>
+                  <option>UBA</option>
+                  <option>Afriland First Bank</option>
+                </select>
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Amount to Withdraw (XAF)</label>
+                <input 
+                  type="number" 
+                  value={amount} 
+                  onChange={(e) => setAmount(e.target.value)}
+                  required 
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                />
+              </div>
+              <div className="flex gap-1">
+                <button type="button" onClick={() => setShowWithdrawModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn-primary" style={{ flex: 1, background: '#e74c3c', border: 'none' }}>Confirm Withdrawal</button>
               </div>
             </form>
           </div>
