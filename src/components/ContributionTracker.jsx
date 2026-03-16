@@ -12,6 +12,7 @@ import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from './MainLayout';
 import CommunityChat from './CommunityChat';
+import { processContribution } from '../utils/transactionHelpers';
 import './Dashboard.css';
 
 const ContributionTracker = ({ theme, toggleTheme }) => {
@@ -25,15 +26,41 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState('member'); // 'member', 'treasurer', 'president'
 
-  const handleMarkAsPaid = async (transactionId) => {
+  const handleMarkAsPaid = async (transactionItem) => {
     try {
-      const { doc, updateDoc } = await import('firebase/firestore');
-      await updateDoc(doc(db, "transactions", transactionId), {
-        status: 'Paid'
+      const { doc, runTransaction, increment } = await import('firebase/firestore');
+      
+      await runTransaction(db, async (transaction) => {
+        const txnRef = doc(db, "transactions", transactionItem.id);
+        const groupRef = doc(db, "groups", groupId);
+        
+        // Update transaction status
+        transaction.update(txnRef, { status: 'Paid' });
+        
+        // Atomically update group total fund
+        transaction.update(groupRef, { 
+          totalFund: increment(transactionItem.amount || 0) 
+        });
       });
-      alert("Contribution verified and approved!");
+
+      alert("Contribution verified and group fund updated!");
     } catch (error) {
       console.error("Approval error:", error);
+      alert("Failed to approve contribution.");
+    }
+  };
+
+  const handleContribute = async () => {
+    const amountStr = prompt('Enter contribution amount (XAF):');
+    if (!amountStr) return;
+    const amount = parseFloat(amountStr);
+    if (isNaN(amount) || amount <= 0) { alert('Invalid amount.'); return; }
+
+    const result = await processContribution(currentUser.uid, groupId, amount, 'contribution');
+    if (result.success) {
+      alert(`Success! ${amount.toLocaleString()} XAF contribution recorded.`);
+    } else {
+      alert(`Failed: ${result.error}`);
     }
   };
 
@@ -139,6 +166,15 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
                 <div className="flex gap-1">
                   <div className="badge"><CheckCircle size={14} /> 85% Paid</div>
                   <div className="badge" style={{ background: '#fef5e7', color: '#f39c12' }}><Clock size={14} /> 15% Pending</div>
+                  {userRole === 'member' && (
+                    <button
+                      className="btn-primary"
+                      style={{ padding: '6px 14px', fontSize: '0.8rem' }}
+                      onClick={handleContribute}
+                    >
+                      + Contribute
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -174,7 +210,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
                             {item.timestamp?.toDate ? item.timestamp.toDate().toLocaleDateString() : 'Recent'}
                             {userRole === 'treasurer' && item.status === 'Pending' && (
                               <button 
-                                onClick={() => handleMarkAsPaid(item.id)}
+                                onClick={() => handleMarkAsPaid(item)}
                                 className="btn-primary" 
                                 style={{ padding: '4px 10px', fontSize: '0.7rem' }}
                               >
