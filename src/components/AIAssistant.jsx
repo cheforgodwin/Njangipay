@@ -95,7 +95,7 @@ const AIAssistant = () => {
     `;
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -207,7 +207,7 @@ const AIAssistant = () => {
           </div>
           
           <div style={{ marginTop: '10px', fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'center', letterSpacing: '0.5px' }}>
-            {apiKey ? '⚡ POWERED BY GEMINI 1.5 FLASH' : '⚠️ AI OFFLINE'}
+            {apiKey ? '⚡ POWERED BY GEMINI 2.0 FLASH' : '⚠️ AI OFFLINE'}
           </div>
         </div>
       ) : (
