@@ -19,6 +19,10 @@ const WalletPage = ({ theme, toggleTheme }) => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userDocId, setUserDocId] = useState(null);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [recipientId, setRecipientId] = useState('');
 
   useEffect(() => {
     if (!currentUser) return;
@@ -56,14 +60,15 @@ const WalletPage = ({ theme, toggleTheme }) => {
     };
   }, [currentUser]);
 
-  const handleDeposit = async () => {
-    if (!userDocId) return;
-    const amount = 10000;
+  const handleDeposit = async (e) => {
+    e.preventDefault();
+    if (!userDocId || !amount) return;
+    const depositAmount = parseFloat(amount.replace(/,/g, ''));
     
     try {
       await addDoc(collection(db, "transactions"), {
         user_id: currentUser.uid,
-        amount: amount,
+        amount: depositAmount,
         type: "deposit",
         title: "Wallet Refill",
         timestamp: serverTimestamp(),
@@ -72,13 +77,52 @@ const WalletPage = ({ theme, toggleTheme }) => {
 
       const userRef = doc(db, "users", userDocId);
       await updateDoc(userRef, {
-        balance: increment(amount)
+        balance: increment(depositAmount)
       });
 
-      alert("Deposit Successful! 10,000 XAF added to your wallet.");
+      setShowDepositModal(false);
+      setAmount('');
+      alert(`Success! ${depositAmount.toLocaleString()} XAF added to your wallet.`);
     } catch (error) {
       console.error("Deposit error:", error);
       alert("Deposit failed. Please try again.");
+    }
+  };
+
+  const handleTransfer = async (e) => {
+    e.preventDefault();
+    if (!userDocId || !amount || !recipientId) return;
+    const transferAmount = parseFloat(amount.replace(/,/g, ''));
+
+    if (transferAmount > balance) {
+      alert("Insufficient funds for this transfer.");
+      return;
+    }
+    
+    try {
+      // 1. Log outgoing transaction
+      await addDoc(collection(db, "transactions"), {
+        user_id: currentUser.uid,
+        amount: transferAmount,
+        type: "transfer",
+        title: `Transfer to NP-${recipientId.substring(0,8).toUpperCase()}`,
+        timestamp: serverTimestamp(),
+        status: "completed"
+      });
+
+      // 2. Update sender balance
+      const userRef = doc(db, "users", userDocId);
+      await updateDoc(userRef, {
+        balance: increment(-transferAmount)
+      });
+
+      setShowTransferModal(false);
+      setAmount('');
+      setRecipientId('');
+      alert(`Successfully transferred ${transferAmount.toLocaleString()} XAF.`);
+    } catch (error) {
+      console.error("Transfer error:", error);
+      alert("Transfer failed.");
     }
   };
 
@@ -89,10 +133,70 @@ const WalletPage = ({ theme, toggleTheme }) => {
           <h1>My Wallet</h1>
         </div>
         <div className="flex gap-1">
-           <button className="btn-secondary" onClick={() => window.print()}><Download size={18} /> Export CSV</button>
-           <button className="btn-primary" onClick={handleDeposit}><Plus size={18} /> Add Funds</button>
+            <button className="btn-secondary" onClick={() => window.print()}><Download size={18} /> Export CSV</button>
+            <button className="btn-primary" onClick={() => setShowDepositModal(true)}><Plus size={18} /> Add Funds</button>
         </div>
       </header>
+
+      {showDepositModal && (
+        <div className="modal-overlay">
+          <div className="glass modal-content">
+            <h2>Add Funds</h2>
+            <form onSubmit={handleDeposit} style={{ marginTop: '20px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Amount to Deposit (XAF)</label>
+                <input 
+                  type="number" 
+                  value={amount} 
+                  onChange={(e) => setAmount(e.target.value)}
+                  required 
+                  placeholder="25,000"
+                  style={{ width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', fontSize: '1.1rem' }}
+                />
+              </div>
+              <div className="flex gap-1">
+                <button type="button" onClick={() => setShowDepositModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Confirm Deposit</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showTransferModal && (
+        <div className="modal-overlay">
+          <div className="glass modal-content">
+            <h2>Transfer Funds</h2>
+            <form onSubmit={handleTransfer} style={{ marginTop: '20px' }}>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Recipient Account ID</label>
+                <input 
+                  type="text" 
+                  value={recipientId} 
+                  onChange={(e) => setRecipientId(e.target.value.toUpperCase())}
+                  required 
+                  placeholder="NP-XXXXXXXX"
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                />
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Amount (XAF)</label>
+                <input 
+                  type="number" 
+                  value={amount} 
+                  onChange={(e) => setAmount(e.target.value)}
+                  required 
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                />
+              </div>
+              <div className="flex gap-1">
+                <button type="button" onClick={() => setShowTransferModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Send XAF</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="dashboard-grid wallet-grid">
         <div>
@@ -106,11 +210,11 @@ const WalletPage = ({ theme, toggleTheme }) => {
             </h2>
             
             <div className="flex gap-1">
-               <button className="btn-primary" style={{ flex: 1, background: 'rgba(255,255,255,0.2)' }} onClick={handleDeposit}>
+               <button className="btn-primary" style={{ flex: 1, background: 'rgba(255,255,255,0.2)' }} onClick={() => setShowDepositModal(true)}>
                   <Download size={18} /> Deposit
                </button>
-               <button className="btn-primary" style={{ flex: 1, background: 'white', color: 'var(--primary-green)' }}>
-                  <ArrowUpRight size={18} /> Withdraw
+               <button className="btn-primary" style={{ flex: 1, background: 'white', color: 'var(--primary-green)' }} onClick={() => setShowTransferModal(true)}>
+                  <ArrowUpRight size={18} /> Transfer
                </button>
             </div>
           </div>

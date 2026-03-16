@@ -21,6 +21,14 @@ const GroupsPage = ({ theme, toggleTheme }) => {
   const [userMemberships, setUserMemberships] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newGroup, setNewGroup] = useState({
+    name: '',
+    type: 'public',
+    focus: 'P2P Savings',
+    entry: '10,000',
+    description: ''
+  });
 
   useEffect(() => {
     // 1. Fetch all groups
@@ -60,6 +68,41 @@ const GroupsPage = ({ theme, toggleTheme }) => {
     };
   }, [currentUser]);
 
+  const handleCreateGroup = async (e) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    
+    try {
+      const docRef = await addDoc(collection(db, "groups"), {
+        ...newGroup,
+        admin_id: currentUser.uid,
+        members: 1,
+        status: 'Active',
+        createdAt: serverTimestamp()
+      });
+      
+      // Also join the group as an admin
+      await addDoc(collection(db, "members"), {
+        user_id: currentUser.uid,
+        userName: getUserDisplayName(),
+        group_id: docRef.id,
+        groupName: newGroup.name,
+        joined_at: serverTimestamp(),
+        aiRiskScore: 1.0, 
+        totalContributed: 0,
+        status: "active",
+        role: "admin"
+      });
+
+      setShowCreateModal(false);
+      setNewGroup({ name: '', type: 'public', focus: 'P2P Savings', entry: '10,000', description: '' });
+      alert("Community circle created successfully!");
+    } catch (error) {
+      console.error("Create group error:", error);
+      alert("Failed to create group.");
+    }
+  };
+
   const handleJoinGroup = async (group) => {
     if (!currentUser) {
       navigate('/login');
@@ -83,7 +126,8 @@ const GroupsPage = ({ theme, toggleTheme }) => {
         status: "active"
       });
       alert(`Successfully joined ${group.name}!`);
-      navigate(`/group/${group.id}/contributions`);
+      // No immediate navigate so user can see they joined multiple if they want, 
+      // though typically they'd go into it.
     } catch (error) {
       console.error("Join group error:", error);
       alert("Failed to join group. Please try again.");
@@ -103,10 +147,67 @@ const GroupsPage = ({ theme, toggleTheme }) => {
           <h1>Savings Communities</h1>
           <p className="text-sub">Join a group and start your savings journey with others.</p>
         </div>
-        <button className="btn-primary" onClick={() => navigate('/groups/create')}>
+        <button className="btn-primary" onClick={() => setShowCreateModal(true)}>
           <Plus size={20} /> Create New Group
         </button>
       </header>
+      
+      {showCreateModal && (
+        <div className="modal-overlay">
+          <div className="glass modal-content">
+            <h2>Create New Community</h2>
+            <form onSubmit={handleCreateGroup} style={{ marginTop: '20px' }}>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Group Name</label>
+                <input 
+                  type="text" 
+                  value={newGroup.name} 
+                  onChange={(e) => setNewGroup({...newGroup, name: e.target.value})}
+                  required 
+                  placeholder="e.g. Douala Savvy Savers"
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                />
+              </div>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Savings Focus</label>
+                <input 
+                  type="text" 
+                  value={newGroup.focus} 
+                  onChange={(e) => setNewGroup({...newGroup, focus: e.target.value})}
+                  placeholder="e.g. Real Estate, Business Capital"
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Min Entry (XAF)</label>
+                  <input 
+                    type="text" 
+                    value={newGroup.entry} 
+                    onChange={(e) => setNewGroup({...newGroup, entry: e.target.value})}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Type</label>
+                  <select 
+                    value={newGroup.type}
+                    onChange={(e) => setNewGroup({...newGroup, type: e.target.value})}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  >
+                    <option value="public">Public</option>
+                    <option value="private">Private (Invite Only)</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
+                <button type="button" onClick={() => setShowCreateModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Launch Group</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="search-filter-bar">
         <div className="search-input-wrapper glass">
