@@ -42,10 +42,13 @@ const AIAssistant = () => {
       setMessages(prev => [...prev, { role: 'assistant', text: response }]);
     } catch (error) {
       console.error("AI Error:", error);
+      const isRateLimited = error.message === 'RATE_LIMITED';
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        text: "I'm experiencing a temporary neural logout. Would you like me to attempt a reconnection?",
-        isRetryable: true,
+        text: isRateLimited 
+          ? "⏳ API rate limit reached. Please wait 30–60 seconds and try again. (Free tier limit)"
+          : "I'm experiencing a temporary neural logout. Would you like me to attempt a reconnection?",
+        isRetryable: !isRateLimited,
         originalQuery: inputText
       }]);
     } finally {
@@ -102,6 +105,13 @@ const AIAssistant = () => {
           contents: [{ parts: [{ text: prompt }] }]
         })
       });
+
+      if (res.status === 429) {
+        throw new Error('RATE_LIMITED');
+      }
+      if (!res.ok) {
+        throw new Error(`API_ERROR_${res.status}`);
+      }
 
       const data = await res.json();
       return data.candidates?.[0]?.content?.parts?.[0]?.text || "I was unable to process that. Could you rephrase?";
