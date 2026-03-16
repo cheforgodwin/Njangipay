@@ -41,7 +41,7 @@ exports.calculateAiRisk = onDocumentCreated("transactions/{transactionId}", asyn
     // 3. Call Google Cloud AI Platform (Vertex AI)
     // NOTE: This assumes you have a model deployed on Vertex AI.
     // Replace PROJECT_ID, LOCATION, and ENDPOINT_ID with actual values.
-    const projectId = process.env.GCP_PROJECT_ID || "njangipay-8e3be";
+    const projectId = process.env.GCP_PROJECT_ID || "njangipay-e4e09";
     const location = "us-central1"; 
     const endpointId = "AI_RISK_MODEL_ENDPOINT"; // Placeholder for real endpoint
 
