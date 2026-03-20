@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { db } from '../config/firebase'; // For potential context fetching later
 
 const AIAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,7 +9,6 @@ const AIAssistant = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const apiKey = import.meta.env.VITE_AI_API_KEY;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -20,17 +18,18 @@ const AIAssistant = () => {
     if (isOpen) scrollToBottom();
   }, [messages, isOpen, isLoading]);
 
+  // Lock body scroll when open on mobile
+  useEffect(() => {
+    if (isOpen && window.innerWidth <= 640) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
-
-    if (!apiKey) {
-      setMessages(prev => [...prev, 
-        { role: 'user', text: inputText },
-        { role: 'assistant', text: "⚠️ System Neural Disconnect: AI services are currently unconfigured. Please contact platform support to enable Gemini intelligence." }
-      ]);
-      setInputText('');
-      return;
-    }
 
     const userMessage = { role: 'user', text: inputText };
     setMessages(prev => [...prev, userMessage]);
@@ -43,11 +42,11 @@ const AIAssistant = () => {
     } catch (error) {
       console.error("AI Error:", error);
       const isRateLimited = error.message === 'RATE_LIMITED';
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        text: isRateLimited 
-          ? "⏳ API rate limit reached. Please wait 30–60 seconds and try again. (Free tier limit)"
-          : "I'm experiencing a temporary neural logout. Would you like me to attempt a reconnection?",
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        text: isRateLimited
+          ? "⏳ Rate limit reached. Please wait 30–60 seconds and try again."
+          : "I'm experiencing a temporary issue. Would you like to retry?",
         isRetryable: !isRateLimited,
         originalQuery: inputText
       }]);
@@ -58,16 +57,14 @@ const AIAssistant = () => {
 
   const handleRetry = async (queryText) => {
     setIsLoading(true);
-    // Remove the error message that had the retry button
     setMessages(prev => prev.slice(0, -1));
-    
     try {
       const response = await callGeminiAI(queryText);
       setMessages(prev => [...prev, { role: 'assistant', text: response }]);
     } catch (error) {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        text: "Neural reconnection failed. Please check your network and try again.",
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        text: "Reconnection failed. Please check your network.",
         isRetryable: true,
         originalQuery: queryText
       }]);
@@ -77,171 +74,307 @@ const AIAssistant = () => {
   };
 
   const callGeminiAI = async (userQuery) => {
-    const prompt = `
-      You are the elite NjangiPay Financial AI Expert. 
-      NjangiPay is a smart community savings and lending platform that digitizes the traditional West African "Njangi" or "Tontine" credit union model.
-      
-      User Goal: ${userQuery}
-      
-      Context guidelines (Even if you don't have the user's specific data yet, assume these are the features they are asking about):
-      - We use AI for credit scoring based on community standing.
-      - We offer a Marketplace for P2P loan funding and investments.
-      - We have automated contribution tracking for group savings.
-      - We focus on ROI strategies, cooperative economics, and building generational wealth.
-      
-      STRICT RULES:
-      1. ALWAYS incline your answers towards finance, group savings, loans, and wealth building. If the user asks a general question, gently pivot the conversation back to how NjangiPay or financial planning can help them.
-      2. Be professional, encouraging, and financially astute. 
-      3. Keep responses concise (under 3 sentences unless explicitly asked for detail).
-      4. Use strong financial terminology appropriate for P2P lending and cooperatives.
-      5. Explicitly mention NjangiPay features (Marketplace, AI Credit Score, Group Savings) where relevant.
-    `;
-
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      const functionUrl = "https://us-central1-njangipay-e4e09.cloudfunctions.net/getAiResponse";
+      
+      const response = await fetch(functionUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
+        body: JSON.stringify({ query: userQuery })
       });
 
-      if (res.status === 429) {
-        throw new Error('RATE_LIMITED');
-      }
-      if (!res.ok) {
-        throw new Error(`API_ERROR_${res.status}`);
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `HTTP_ERROR_${response.status}`);
       }
 
-      const data = await res.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || "I was unable to process that. Could you rephrase?";
-    } catch (err) {
-      throw err;
+      const data = await response.json();
+      return data.text;
+    } catch (error) {
+      console.error("Cloud Function Error:", error);
+      throw error;
     }
   };
 
+  // --- Styles ---
+  const isMobile = () => window.innerWidth <= 640;
+
+  const overlayStyle = {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.5)',
+    zIndex: 998,
+    display: isOpen ? 'block' : 'none',
+    backdropFilter: 'blur(2px)',
+  };
+
+  const panelStyle = {
+    position: 'fixed',
+    zIndex: 999,
+    // Mobile: full-width bottom sheet
+    bottom: isOpen ? 0 : '-100%',
+    left: 0,
+    right: 0,
+    height: '90dvh',
+    maxWidth: '100%',
+    borderRadius: '24px 24px 0 0',
+    // Desktop override via CSS class
+    transition: 'bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+    display: 'flex',
+    flexDirection: 'column',
+    padding: '0',
+    overflow: 'hidden',
+    background: 'var(--glass-bg, #1a1f2e)',
+    border: '1px solid var(--primary-green, #27ae60)',
+    boxShadow: '0 -8px 40px rgba(39,174,96,0.25)',
+  };
+
+  const desktopPanelStyle = {
+    bottom: 'auto',
+    top: 'auto',
+    left: 'auto',
+    right: '24px',
+    bottom: '88px',
+    height: '560px',
+    width: '380px',
+    maxWidth: 'calc(100vw - 48px)',
+    borderRadius: '20px',
+    boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+  };
+
   return (
-    <div style={{ position: 'fixed', bottom: '30px', right: '30px', zIndex: 1000 }}>
-      {isOpen ? (
-        <div className="glass ai-chat-container" style={{ 
-          width: '380px', 
-          height: '550px', 
-          display: 'flex', 
-          flexDirection: 'column', 
-          padding: '20px', 
-          border: '1px solid var(--primary-green)', 
-          boxShadow: 'var(--shadow-lg)', 
-          borderRadius: '20px',
-          background: 'var(--glass-bg)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-              <span style={{ fontSize: '1.2rem' }}>🤖</span> Njangi AI <span style={{ fontSize: '0.7rem', background: 'var(--accent-light)', color: 'var(--primary-dark)', padding: '2px 6px', borderRadius: '4px' }}>EXPERT</span>
+    <>
+      {/* Mobile overlay backdrop */}
+      <div style={overlayStyle} onClick={() => setIsOpen(false)} />
+
+      {/* Floating trigger button */}
+      <button
+        onClick={() => setIsOpen(o => !o)}
+        aria-label="Open AI Assistant"
+        className="btn-primary"
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 1000,
+          width: '60px',
+          height: '60px',
+          borderRadius: '18px',
+          padding: 0,
+          fontSize: '1.8rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 8px 25px rgba(39,174,96,0.45)',
+          border: '3px solid rgba(255,255,255,0.15)',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          transform: isOpen ? 'scale(0.92)' : 'scale(1)',
+        }}
+      >
+        {isOpen ? '✕' : '🤖'}
+      </button>
+
+      {/* Chat panel — mobile bottom sheet / desktop floating */}
+      {isOpen && (
+        <div
+          className="ai-panel"
+          style={{
+            position: 'fixed',
+            zIndex: 999,
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'var(--glass-bg, #1a1f2e)',
+            border: '1px solid var(--primary-green, #27ae60)',
+            overflow: 'hidden',
+            // Mobile defaults (overridden by media query below)
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '90dvh',
+            maxHeight: '90dvh',
+            borderRadius: '24px 24px 0 0',
+            boxShadow: '0 -8px 40px rgba(39,174,96,0.25)',
+          }}
+        >
+          {/* Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 20px',
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
+            flexShrink: 0,
+          }}>
+            {/* Drag handle (mobile hint) */}
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '40px',
+              height: '4px',
+              borderRadius: '2px',
+              background: 'rgba(255,255,255,0.2)',
+            }} />
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', fontSize: '1rem' }}>
+              <span style={{ fontSize: '1.3rem' }}>🤖</span>
+              Njangi AI
+              <span style={{ fontSize: '0.65rem', background: 'var(--accent-light)', color: 'var(--primary-dark)', padding: '2px 7px', borderRadius: '4px', fontWeight: 700 }}>EXPERT</span>
             </h3>
-            <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}>×</button>
+            <button
+              onClick={() => setIsOpen(false)}
+              style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px 8px', borderRadius: '8px' }}
+            >✕</button>
           </div>
 
-          <div className="ai-messages-list" style={{ 
-            flex: 1, 
-            overflowY: 'auto', 
-            background: 'var(--accent-light)', 
-            borderRadius: '15px', 
-            padding: '15px', 
-            marginBottom: '15px', 
-            display: 'flex', 
-            flexDirection: 'column', 
+          {/* Messages */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
             gap: '12px',
-            border: '1px solid var(--glass-border)'
+            WebkitOverflowScrolling: 'touch',
           }}>
             {messages.map((msg, i) => (
-                <div key={i} style={{ 
+              <div key={i} style={{
                 alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                background: msg.role === 'user' ? 'var(--primary-green)' : 'var(--white)',
+                background: msg.role === 'user' ? 'var(--primary-green, #27ae60)' : 'rgba(255,255,255,0.07)',
                 color: msg.role === 'user' ? 'white' : 'var(--text-main)',
-                padding: '12px 16px',
+                padding: '12px 15px',
                 borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                maxWidth: '88%',
-                fontSize: '0.85rem',
-                boxShadow: 'var(--shadow-sm)',
-                lineHeight: '1.5',
-                border: msg.role === 'assistant' ? '1px solid var(--glass-border)' : 'none',
-                position: 'relative'
+                maxWidth: '85%',
+                fontSize: '0.875rem',
+                lineHeight: '1.55',
+                border: msg.role === 'assistant' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                wordBreak: 'break-word',
               }}>
                 {msg.text}
                 {msg.isRetryable && (
-                  <button 
+                  <button
                     onClick={() => handleRetry(msg.originalQuery)}
-                    style={{ 
-                      display: 'block', 
-                      marginTop: '8px', 
-                      background: 'var(--primary-green)', 
-                      color: 'white', 
-                      border: 'none', 
-                      padding: '4px 12px', 
-                      borderRadius: '6px', 
-                      fontSize: '0.75rem', 
+                    style={{
+                      display: 'block',
+                      marginTop: '8px',
+                      background: 'var(--primary-green)',
+                      color: 'white',
+                      border: 'none',
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
                       cursor: 'pointer',
-                      fontWeight: '600'
+                      fontWeight: 600,
                     }}
-                  >
-                    Retry Connection
-                  </button>
+                  >↩ Retry</button>
                 )}
               </div>
             ))}
             {isLoading && (
-              <div style={{ alignSelf: 'flex-start', background: 'var(--white)', color: 'var(--text-main)', padding: '10px 14px', borderRadius: '15px 15px 15px 2px', fontSize: '0.9rem', border: '1px solid var(--glass-border)' }}>
-                <span className="typing-indicator">Analyzing platform data...</span>
+              <div style={{
+                alignSelf: 'flex-start',
+                background: 'rgba(255,255,255,0.07)',
+                padding: '12px 16px',
+                borderRadius: '18px 18px 18px 4px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                fontSize: '0.875rem',
+                display: 'flex',
+                gap: '4px',
+                alignItems: 'center',
+              }}>
+                <span style={{ animation: 'pulse 1s infinite' }}>●</span>
+                <span style={{ animation: 'pulse 1s infinite 0.2s' }}>●</span>
+                <span style={{ animation: 'pulse 1s infinite 0.4s' }}>●</span>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', background: 'var(--white)', padding: '8px', borderRadius: '15px', border: '1px solid var(--glass-border)' }}>
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Query Njangi intelligence..."
-              style={{ flex: 1, padding: '10px 15px', borderRadius: '10px', border: 'none', outline: 'none', fontSize: '0.9rem', background: 'transparent', color: 'var(--text-main)' }}
-            />
-            <button 
-              onClick={handleSendMessage}
-              disabled={isLoading || !inputText.trim()}
-              className="btn-primary" 
-              style={{ padding: '0 12px', borderRadius: '12px', height: '40px', width: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: (!inputText.trim() || isLoading) ? 0.6 : 1 }}
-            >
-              {isLoading ? '...' : '→'}
-            </button>
-          </div>
-          
-          <div style={{ marginTop: '10px', fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'center', letterSpacing: '0.5px' }}>
-            {apiKey ? '⚡ POWERED BY GEMINI 2.0 FLASH' : '⚠️ AI OFFLINE'}
+          {/* Input bar */}
+          <div style={{
+            padding: '12px 16px',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            background: 'rgba(0,0,0,0.2)',
+            flexShrink: 0,
+            paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+          }}>
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              background: 'rgba(255,255,255,0.07)',
+              borderRadius: '14px',
+              padding: '8px 8px 8px 16px',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }}>
+              <input
+                type="text"
+                id="ai-query-input"
+                name="ai-query-input"
+                value={inputText}
+                onChange={e => setInputText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                placeholder="Ask Njangi AI..."
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '0.9rem',
+                  color: 'var(--text-main)',
+                  minWidth: 0,
+                }}
+                autoFocus
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={isLoading || !inputText.trim()}
+                style={{
+                  background: inputText.trim() && !isLoading ? 'var(--primary-green, #27ae60)' : 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  borderRadius: '10px',
+                  width: '40px',
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: inputText.trim() && !isLoading ? 'pointer' : 'not-allowed',
+                  fontSize: '1.1rem',
+                  transition: 'background 0.2s',
+                  flexShrink: 0,
+                }}
+              >
+                {isLoading ? '…' : '→'}
+              </button>
+            </div>
+            <p style={{ margin: '6px 0 0', fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', textAlign: 'center', letterSpacing: '0.5px' }}>
+              ⚡ SECURE AI POWERED BY NJANGIPAY BACKEND
+            </p>
           </div>
         </div>
-      ) : (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="btn-primary glass ai-trigger"
-          style={{ 
-            width: '65px', 
-            height: '65px', 
-            borderRadius: '20px', 
-            padding: 0, 
-            fontSize: '2rem', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            boxShadow: '0 10px 25px rgba(39, 174, 96, 0.4)',
-            border: '3px solid var(--white)',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        >
-          🤖
-        </button>
       )}
-    </div>
+
+      {/* Responsive styles via style tag */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+
+        /* Desktop: floating panel, not full-screen */
+        @media (min-width: 641px) {
+          .ai-panel {
+            bottom: 88px !important;
+            left: auto !important;
+            right: 24px !important;
+            width: 380px !important;
+            height: 560px !important;
+            max-height: 80vh !important;
+            border-radius: 20px !important;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+          }
+        }
+      `}</style>
+    </>
   );
 };
 

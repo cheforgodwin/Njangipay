@@ -1,12 +1,56 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { PredictionServiceClient } = require("@google-cloud/aiplatform");
 const axios = require("axios");
+const cors = require("cors")({ origin: true });
 
 admin.initializeApp();
 
 // Initialize the AI Platform Prediction Service Client
 const aiClient = new PredictionServiceClient();
+
+/**
+ * Cloud Function to get AI response for the chat assistant.
+ * Using onRequest with manual CORS for maximum compatibility.
+ */
+exports.getAiResponse = onRequest({ maxInstances: 10 }, (request, response) => {
+  cors(request, response, async () => {
+    try {
+      // 1. Validate request
+      const userQuery = request.body?.query;
+      if (!userQuery) {
+        return response.status(400).send({ error: "No query provided." });
+      }
+
+      // 2. Fetch API Key
+      const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_AI_API_KEY;
+      if (!apiKey) {
+        console.error("CRITICAL: GEMINI_API_KEY is missing.");
+        return response.status(500).send({ error: "AI Backend unconfigured." });
+      }
+
+      const prompt = `You are the NjangiPay Financial AI Expert. User Query: ${userQuery}. (Keep it concise, under 3 sentences).`;
+
+      // 3. API Call
+      const geminiRes = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        { contents: [{ parts: [{ text: prompt }] }] },
+        { headers: { 'Content-Type': 'application/json' }, timeout: 8000 }
+      );
+
+      const aiText = geminiRes.data.candidates?.[0]?.content?.parts?.[0]?.text;
+      return response.send({ text: aiText || "I couldn't generate a response." });
+
+    } catch (error) {
+      console.error("Function Error:", error.message);
+      return response.status(500).send({ 
+        error: "The AI is momentarily unavailable.",
+        details: error.message 
+      });
+    }
+  });
+});
 
 /**
  * Cloud Function to calculate AI Risk Score for a borrower.
