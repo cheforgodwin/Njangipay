@@ -19,6 +19,7 @@ import {
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
+import { processLoanFunding } from '../utils/transactionHelpers';
 import MainLayout from './MainLayout';
 import { collection, query, onSnapshot, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc, increment, where, getDocs } from 'firebase/firestore';
 import './Dashboard.css';
@@ -110,7 +111,7 @@ const Marketplace = ({ theme, toggleTheme }) => {
   };
 
   const handleFundLoan = async (loan) => {
-    if (!currentUser || !userDocId) return;
+    if (!currentUser) return;
     
     if (loan.user_id === currentUser.uid) {
       alert("You cannot fund your own loan request.");
@@ -125,32 +126,20 @@ const Marketplace = ({ theme, toggleTheme }) => {
     const confirm = window.confirm(`Are you sure you want to fund ${loan.user}'s request for ${loan.amount.toLocaleString()} XAF?`);
     if (!confirm) return;
 
+    setLoading(true);
     try {
-      // 1. Deduct from funder
-      await updateDoc(doc(db, "users", userDocId), {
-        balance: increment(-loan.amount)
-      });
-
-      // 2. Log transaction for funder
-      await addDoc(collection(db, "transactions"), {
-        user_id: currentUser.uid,
-        amount: loan.amount,
-        type: "loan_funding",
-        title: `Funded Loan for ${loan.user}`,
-        timestamp: serverTimestamp(),
-        status: "completed"
-      });
-
-      // 3. Close the request (or update status)
-      await updateDoc(doc(db, "loan_requests", loan.id), {
-        status: 'funded',
-        fundedBy: currentUser.uid
-      });
-
-      alert("Transaction Successful! You have funded this loan.");
+      const result = await processLoanFunding(currentUser.uid, loan);
+      
+      if (result.success) {
+        alert("Transaction Successful! You have funded this loan.");
+      } else {
+        alert(`Funding failed: ${result.error}`);
+      }
     } catch (error) {
       console.error("Funding error:", error);
       alert("Failed to fund loan. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 

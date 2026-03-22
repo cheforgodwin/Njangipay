@@ -1,25 +1,29 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { functions } from '../config/firebase';
+import { httpsCallable } from 'firebase/functions';
+
+// Use the API key directly for local development if needed
+const frontendApiKey = import.meta.env.VITE_AI_API_KEY;
 
 const AIAssistant = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [messages, setMessages] = React.useState([
     { role: 'assistant', text: "Hello! I'm your NjangiPay financial expert. How can I help you manage your savings, credits, or ROI strategies today?" }
   ]);
-  const [inputText, setInputText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef(null);
-
+  const [inputText, setInputText] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+  const messagesEndRef = React.useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen) scrollToBottom();
   }, [messages, isOpen, isLoading]);
 
   // Lock body scroll when open on mobile
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen && window.innerWidth <= 640) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -75,24 +79,35 @@ const AIAssistant = () => {
 
   const callGeminiAI = async (userQuery) => {
     try {
-      const functionUrl = "https://us-central1-njangipay-e4e09.cloudfunctions.net/getAiResponse";
+      // Primary: Use the secure Cloud Function
+      const getAiResponse = httpsCallable(functions, 'getAiResponse');
+      const result = await getAiResponse({ query: userQuery });
       
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: userQuery })
-      });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || `HTTP_ERROR_${response.status}`);
+      if (result.data.error) throw new Error(result.data.error);
+      return result.data.text || "I was unable to process that. Could you rephrase?";
+    } catch (error) {
+      console.warn("Cloud Function failed, trying direct frontend fallback:", error);
+      
+      // Fallback: If Cloud Function isn't deployed yet, use the frontend key directly
+      if (!frontendApiKey) {
+        throw new Error("AI Backend is unconfigured (missing VITE_AI_API_KEY).");
       }
 
-      const data = await response.json();
-      return data.text;
-    } catch (error) {
-      console.error("Cloud Function Error:", error);
-      throw error;
+      const prompt = `You are the elite NjangiPay Financial AI Expert. NjangiPay is a smart community savings and lending platform. 
+      Rules: Concise (under 3 sentences), professional, cite features like Marketplace/Group Savings.
+      Goal: ${userQuery}`;
+
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${frontendApiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+
+      if (res.status === 429) throw new Error('RATE_LIMITED');
+      if (!res.ok) throw new Error(`API_ERROR_${res.status}`);
+
+      const data = await res.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || "I was unable to process that. Could you rephrase?";
     }
   };
 
@@ -130,7 +145,6 @@ const AIAssistant = () => {
   };
 
   const desktopPanelStyle = {
-    bottom: 'auto',
     top: 'auto',
     left: 'auto',
     right: '24px',
@@ -347,7 +361,7 @@ const AIAssistant = () => {
               </button>
             </div>
             <p style={{ margin: '6px 0 0', fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', textAlign: 'center', letterSpacing: '0.5px' }}>
-              ⚡ SECURE AI POWERED BY NJANGIPAY BACKEND
+              ⚡ AI POWERED BY GEMINI (FREE SPARK PLAN)
             </p>
           </div>
         </div>

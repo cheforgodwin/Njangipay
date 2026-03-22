@@ -28,8 +28,7 @@ const CommunityChat = ({ groupId, theme }) => {
 
     const q = query(
       collection(db, "messages"),
-      where("groupId", "==", groupId),
-      orderBy("timestamp", "asc")
+      where("groupId", "==", groupId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -37,6 +36,8 @@ const CommunityChat = ({ groupId, theme }) => {
         id: doc.id,
         ...doc.data()
       }));
+      // Client-side sort to avoid index requirement
+      msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
       setMessages(msgs);
       setLoading(false);
       scrollToBottom();

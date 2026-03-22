@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Plus, 
   Search, 
@@ -8,7 +8,7 @@ import {
   Shield, 
   ArrowRight
 } from 'lucide-react';
-import { collection, query, onSnapshot, orderBy, where, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, where, addDoc, serverTimestamp, doc, runTransaction, increment } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from './MainLayout';
@@ -17,6 +17,7 @@ import './Dashboard.css';
 const GroupsPage = ({ theme, toggleTheme }) => {
   const { currentUser, getUserDisplayName } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [groups, setGroups] = useState([]);
   const [userMemberships, setUserMemberships] = useState(new Set());
   const [loading, setLoading] = useState(true);
@@ -68,6 +69,24 @@ const GroupsPage = ({ theme, toggleTheme }) => {
     };
   }, [currentUser]);
 
+  // 3. Handle auto-join from invite link
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const joinId = params.get('join');
+    if (joinId && groups.length > 0 && currentUser) {
+      const groupToJoin = groups.find(g => g.id === joinId);
+      if (groupToJoin && !userMemberships.has(joinId)) {
+        // Automatically scroll to the group or trigger join
+        const element = document.getElementById(`group-${joinId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('highlight-card');
+          setTimeout(() => element.classList.remove('highlight-card'), 3000);
+        }
+      }
+    }
+  }, [location, groups, currentUser, userMemberships]);
+
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     if (!currentUser) return;
@@ -97,6 +116,7 @@ const GroupsPage = ({ theme, toggleTheme }) => {
       setShowCreateModal(false);
       setNewGroup({ name: '', type: 'public', focus: 'P2P Savings', entry: '10,000', description: '' });
       alert("Community circle created successfully!");
+      navigate(`/group/${docRef.id}/contributions`);
     } catch (error) {
       console.error("Create group error:", error);
       alert("Failed to create group.");
@@ -115,19 +135,33 @@ const GroupsPage = ({ theme, toggleTheme }) => {
     }
 
     try {
-      await addDoc(collection(db, "members"), {
-        user_id: currentUser.uid,
-        userName: getUserDisplayName(),
-        group_id: group.id,
-        groupName: group.name,
-        joined_at: serverTimestamp(),
-        aiRiskScore: 0.95,
-        totalContributed: 0,
-        status: "active"
+      await runTransaction(db, async (transaction) => {
+        const groupRef = doc(db, "groups", group.id);
+        const groupSnap = await transaction.get(groupRef);
+        
+        if (!groupSnap.exists()) throw new Error("Group doesn't exist anymore.");
+        
+        // 1. Add membership
+        const memRef = doc(collection(db, "members"));
+        transaction.set(memRef, {
+          user_id: currentUser.uid,
+          userName: getUserDisplayName(),
+          group_id: group.id,
+          groupName: group.name,
+          joined_at: serverTimestamp(),
+          aiRiskScore: 0.95,
+          totalContributed: 0,
+          status: "active",
+          role: "member"
+        });
+
+        // 2. Increment member count
+        transaction.update(groupRef, {
+          members: increment(1)
+        });
       });
+
       alert(`Successfully joined ${group.name}!`);
-      // No immediate navigate so user can see they joined multiple if they want, 
-      // though typically they'd go into it.
     } catch (error) {
       console.error("Join group error:", error);
       alert("Failed to join group. Please try again.");
@@ -227,7 +261,12 @@ const GroupsPage = ({ theme, toggleTheme }) => {
             <div className="typing-indicator">Loading groups...</div>
           </div>
         ) : filteredGroups.length > 0 ? filteredGroups.map(group => (
-          <div key={group.id} className="glass card flex-column" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div 
+            key={group.id} 
+            id={`group-${group.id}`}
+            className={`glass card flex-column ${new URLSearchParams(location.search).get('join') === group.id ? 'highlight-card' : ''}`}
+            style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+          >
             <div className="flex-between">
               <div className="badge">
                 {group.type === 'public' ? <Globe size={14} /> : <Shield size={14} />}
