@@ -1,4 +1,4 @@
-import { Leaf, Mail, Lock, ArrowRight, Chrome, User, Phone, CheckCircle } from 'lucide-react';
+import { Leaf, Mail, Lock, ArrowRight, Chrome, User, Phone, CheckCircle, Users } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +11,10 @@ const SignupPage = ({ theme, toggleTheme }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [accountType, setAccountType] = useState('individual'); // 'individual' or 'community'
+  const [communityName, setCommunityName] = useState('');
+  const [communityFocus, setCommunityFocus] = useState('');
+  
   const [verificationCode, setVerificationCode] = useState('');
   const [usePhone, setUsePhone] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
@@ -30,8 +34,17 @@ const SignupPage = ({ theme, toggleTheme }) => {
     try {
       setError('');
       setLoading(true);
-      await signup(email, password, phoneNumber);
-      // Removed direct navigate here to allow AuthContext to update currentUser first
+      
+      const extraData = {
+        accountType,
+        ...(accountType === 'community' && { 
+          communityName, 
+          communityFocus,
+          isCommunityAdmin: true 
+        })
+      };
+
+      await signup(email, password, phoneNumber, extraData);
     } catch (err) {
       setError('Failed to create an account.');
       console.error(err);
@@ -61,7 +74,6 @@ const SignupPage = ({ theme, toggleTheme }) => {
       setError('');
       setLoading(true);
       await confirmationResult.confirm(verificationCode);
-      // Redirect handled by useEffect
     } catch (err) {
       setError('Invalid verification code.');
       console.error(err);
@@ -69,7 +81,6 @@ const SignupPage = ({ theme, toggleTheme }) => {
     setLoading(false);
   }
 
-  // Use useEffect to handle redirection once logged in
   useEffect(() => {
     if (!loading && currentUser) {
       navigate('/dashboard');
@@ -119,6 +130,23 @@ const SignupPage = ({ theme, toggleTheme }) => {
             </button>
           </div>
 
+          <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+            <button 
+               type="button" 
+               className={`chip ${accountType === 'individual' ? 'active' : ''}`}
+               onClick={() => setAccountType('individual')}
+            >
+              <User size={14} /> Individual
+            </button>
+            <button 
+               type="button" 
+               className={`chip ${accountType === 'community' ? 'active' : ''}`}
+               onClick={() => setAccountType('community')}
+            >
+              <Users size={14} /> Community Rep
+            </button>
+          </div>
+
           {!usePhone ? (
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -137,6 +165,41 @@ const SignupPage = ({ theme, toggleTheme }) => {
                   />
                 </div>
               </div>
+
+              {accountType === 'community' && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="communityName">Community Name</label>
+                    <div className="input-wrapper">
+                      <Users className="input-icon" size={18} />
+                      <input 
+                        type="text" 
+                        id="communityName"
+                        className="auth-input"
+                        placeholder="e.g. Douala Central Njangi" 
+                        value={communityName}
+                        onChange={(e) => setCommunityName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="communityFocus">Community Focus</label>
+                    <div className="input-wrapper">
+                      <Leaf className="input-icon" size={18} />
+                      <input 
+                        type="text" 
+                        id="communityFocus"
+                        className="auth-input"
+                        placeholder="e.g. Agricultural Development" 
+                        value={communityFocus}
+                        onChange={(e) => setCommunityFocus(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="form-group">
                 <label className="form-label" htmlFor="phoneNumber">Phone Number</label>
@@ -194,7 +257,7 @@ const SignupPage = ({ theme, toggleTheme }) => {
                 style={{ width: '100%', marginTop: '1rem' }}
                 disabled={loading}
               >
-                {loading ? 'Creating Account...' : 'Sign Up'} <ArrowRight size={18} />
+                {loading ? 'Creating Account...' : (accountType === 'community' ? 'Register Community' : 'Sign Up')} <ArrowRight size={18} />
               </button>
             </form>
           ) : (

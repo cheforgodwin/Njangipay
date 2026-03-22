@@ -158,6 +158,32 @@
   border-color: var(--primary-green);
 }
 
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid #e0e0e0;
+  background: white;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chip.active {
+  background: var(--primary-green);
+  color: white;
+  border-color: var(--primary-green);
+}
+
+.chip:hover:not(.active) {
+  border-color: var(--primary-green);
+  color: var(--primary-green);
+}
+
 @media (max-width: 480px) {
   .auth-wrapper {
     padding: 1.5rem 1rem;

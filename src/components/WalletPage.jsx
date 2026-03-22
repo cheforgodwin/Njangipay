@@ -9,6 +9,7 @@ import {
 import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
+import { processTransfer } from '../utils/transactionHelpers';
 import MainLayout from './MainLayout';
 import './Dashboard.css';
 
@@ -80,11 +81,12 @@ const WalletPage = ({ theme, toggleTheme }) => {
     // 2. Get transaction history
     const transQuery = query(
       collection(db, "transactions"), 
-      where("user_id", "==", currentUser.uid),
-      orderBy("timestamp", "desc")
+      where("user_id", "==", currentUser.uid)
     );
     const unsubscribeTrans = onSnapshot(transQuery, (snapshot) => {
       const transList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Client-side sort to bypass index requirement
+      transList.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
       setTransactions(transList);
       setLoading(false);
     }, (error) => {
@@ -129,38 +131,32 @@ const WalletPage = ({ theme, toggleTheme }) => {
 
   const handleTransfer = async (e) => {
     e.preventDefault();
-    if (!userDocId || !amount || !recipientId) return;
+    if (!amount || !recipientId) return;
     const transferAmount = parseFloat(amount.replace(/,/g, ''));
+    if (isNaN(transferAmount) || transferAmount <= 0) return;
 
     if (transferAmount > balance) {
       alert("Insufficient funds for this transfer.");
       return;
     }
     
+    setLoading(true);
     try {
-      // 1. Log outgoing transaction
-      await addDoc(collection(db, "transactions"), {
-        user_id: currentUser.uid,
-        amount: transferAmount,
-        type: "transfer",
-        title: `Transfer to NP-${recipientId.substring(0,8).toUpperCase()}`,
-        timestamp: serverTimestamp(),
-        status: "completed"
-      });
-
-      // 2. Update sender balance
-      const userRef = doc(db, "users", userDocId);
-      await updateDoc(userRef, {
-        balance: increment(-transferAmount)
-      });
-
-      setShowTransferModal(false);
-      setAmount('');
-      setRecipientId('');
-      alert(`Successfully transferred ${transferAmount.toLocaleString()} XAF.`);
+      const result = await processTransfer(currentUser.uid, recipientId, transferAmount);
+      
+      if (result.success) {
+        setShowTransferModal(false);
+        setAmount('');
+        setRecipientId('');
+        alert(`Successfully transferred ${transferAmount.toLocaleString()} XAF to NP-${recipientId}.`);
+      } else {
+        alert(`Transfer failed: ${result.error}`);
+      }
     } catch (error) {
       console.error("Transfer error:", error);
-      alert("Transfer failed.");
+      alert("An unexpected error occurred during transfer.");
+    } finally {
+      setLoading(false);
     }
   };
 

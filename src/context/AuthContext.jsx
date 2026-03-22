@@ -21,14 +21,15 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const signup = async (email, password, phoneNumber = '') => {
+  const signup = async (email, password, phoneNumber = '', extraData = {}) => {
     const res = await createUserWithEmailAndPassword(auth, email, password);
     // Initialize Firestore user doc
     await setDoc(doc(db, "users", res.user.uid), {
       email,
       phoneNumber,
-      role: 'user',
-      createdAt: new Date().toISOString()
+      role: extraData.accountType === 'community' ? 'admin' : 'user',
+      createdAt: new Date().toISOString(),
+      ...extraData
     });
     return res;
   };

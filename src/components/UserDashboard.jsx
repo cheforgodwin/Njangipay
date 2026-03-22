@@ -21,6 +21,7 @@ const UserDashboard = ({ theme, toggleTheme }) => {
 
   const [walletBalance, setWalletBalance] = useState(0);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [userGroups, setUserGroups] = useState([]);
   const [aiScore, setAiScore] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -51,26 +52,35 @@ const UserDashboard = ({ theme, toggleTheme }) => {
     const transRef = query(
       collection(db, "transactions"), 
       where("user_id", "==", currentUser.uid), 
-      orderBy("timestamp", "desc"), 
-      limit(5)
+      limit(20) // Get more to allow sorting correctly on frontend
     );
     const unsubscribeTrans = onSnapshot(transRef, (snapshot) => {
       const trans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setRecentActivity(trans);
+      trans.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+      setRecentActivity(trans.slice(0, 5));
+    }, (error) => {
+      console.warn("Transactions listen failed:", error);
+    });
+
+    // 4. Listen for user's groups
+    const userGroupsQuery = query(
+      collection(db, "members"),
+      where("user_id", "==", currentUser.uid)
+    );
+    const unsubscribeUserGroups = onSnapshot(userGroupsQuery, (snapshot) => {
+      const groups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      groups.sort((a, b) => (b.joined_at?.seconds || 0) - (a.joined_at?.seconds || 0));
+      setUserGroups(groups.slice(0, 3));
       setLoading(false);
     }, (error) => {
-      console.warn("Transactions listen failed (unindexed?):", error);
-      setRecentActivity([
-        { id: '1', type: 'saving', amount: 50000, timestamp: new Date(), title: 'Saving Contribution' },
-        { id: '2', type: 'loan', amount: 5000, timestamp: new Date(), title: 'Loan Interest Payment' }
-      ]);
-      setLoading(false);
+      console.warn("User groups listen failed:", error);
     });
 
     return () => {
       unsubscribeUser();
       unsubscribeMember();
       unsubscribeTrans();
+      unsubscribeUserGroups();
     };
   }, [currentUser]);
 
@@ -98,26 +108,36 @@ const UserDashboard = ({ theme, toggleTheme }) => {
           </div>
         </div>
 
-        <div className="glass card">
-          <h3 style={{ marginBottom: '1.5rem' }}>Active Njangi</h3>
-          <div className="flex gap-1" style={{ alignItems: 'center' }}>
-             <div style={{ width: '56px', height: '56px', borderRadius: '12px', background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Users color="var(--primary-green)" />
-             </div>
-             <div>
-               <p style={{ fontWeight: '700' }}>Global Hub Unit A</p>
-               <p className="text-muted" style={{ fontSize: '0.85rem' }}>Next payout: 28 Oct</p>
-             </div>
+        <div className="glass card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="flex-between">
+            <h3 style={{ margin: 0 }}>Active Njangi</h3>
+            <span className="badge" style={{ cursor: 'pointer' }} onClick={() => navigate('/groups')}>Join More</span>
           </div>
-          <div className="progress-track">
-            <div className="progress-info">
-               <span>Progress</span>
-               <span style={{ fontWeight: '700' }}>75%</span>
+          
+          {userGroups.length > 0 ? userGroups.map((group) => (
+            <div 
+              key={group.id} 
+              className="flex-between" 
+              style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', cursor: 'pointer' }}
+              onClick={() => navigate(`/group/${group.group_id}/contributions`)}
+            >
+              <div className="flex gap-1" style={{ alignItems: 'center' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                   <Users color="var(--primary-green)" size={20} />
+                </div>
+                <div>
+                  <p style={{ fontWeight: '700', fontSize: '0.9rem', margin: 0 }}>{group.groupName}</p>
+                  <p className="text-muted" style={{ fontSize: '0.75rem', margin: 0 }}>{group.role}</p>
+                </div>
+              </div>
+              <ArrowUpRight size={16} color="var(--text-muted)" />
             </div>
-            <div className="progress-bar">
-               <div className="progress-fill" style={{ width: '75%' }}></div>
+          )) : (
+            <div className="flex-column flex-center" style={{ padding: '1rem', textAlign: 'center' }}>
+              <p className="text-muted" style={{ fontSize: '0.85rem' }}>You haven't joined any groups yet.</p>
+              <button className="btn-secondary" style={{ padding: '6px 15px', fontSize: '0.8rem' }} onClick={() => navigate('/groups')}>Find Groups</button>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="glass card" style={{ border: aiScore > 0.8 ? '1px solid var(--primary-green)' : '1px solid #f1c40f', display: 'flex', flexDirection: 'column' }}>

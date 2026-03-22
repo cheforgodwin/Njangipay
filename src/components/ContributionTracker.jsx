@@ -5,9 +5,11 @@ import {
   Table, 
   PieChart, 
   CheckCircle, 
-  Clock
+  Clock,
+  UserPlus,
+  Copy
 } from 'lucide-react';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from './MainLayout';
@@ -18,13 +20,70 @@ import './Dashboard.css';
 const ContributionTracker = ({ theme, toggleTheme }) => {
   const { groupId } = useParams();
   const navigate = useNavigate();
-  const { getUserDisplayName } = useAuth();
+  const { currentUser, getUserDisplayName } = useAuth();
   
   const [contributions, setContributions] = useState([]);
-  const [activeTab, setActiveTab] = useState('ledger'); // 'ledger', 'analytics', 'chat'
+  const [members, setMembers] = useState([]);
+  const [activeTab, setActiveTab] = useState('ledger'); // 'ledger', 'analytics', 'members', 'chat'
   const [groupDetails, setGroupDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState('member'); // 'member', 'treasurer', 'president'
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+
+  const handleInvite = () => {
+    setShowInviteModal(true);
+  };
+
+  const handleManualAddMember = async (e) => {
+    e.preventDefault();
+    if (!newMemberEmail) return;
+    
+    try {
+      const { addDoc, collection, serverTimestamp, query, where, getDocs } = await import('firebase/firestore');
+      
+      // 1. Check if user exists (simplification: find by email in users collection)
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", newMemberEmail));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        alert("User with this email not found. They must sign up first.");
+        return;
+      }
+      
+      const targetUser = querySnapshot.docs[0].data();
+      const targetUserId = querySnapshot.docs[0].id; // The user ID
+
+      // 2. Add to members collection
+      await addDoc(collection(db, "members"), {
+        user_id: targetUserId,
+        userName: targetUser.userName || newMemberEmail.split('@')[0],
+        group_id: groupId,
+        groupName: groupDetails?.name || 'Group',
+        joined_at: serverTimestamp(),
+        aiRiskScore: 0.95,
+        totalContributed: 0,
+        status: "active",
+        role: "member"
+      });
+
+      alert(`Success! ${newMemberEmail} added to the group.`);
+      setShowAddMemberModal(false);
+      setNewMemberEmail('');
+    } catch (error) {
+      console.error("Manual add error:", error);
+      alert("Failed to add member.");
+    }
+  };
+
+  const copyInviteLink = () => {
+    const inviteLink = `${window.location.origin}/groups?join=${groupId}`;
+    navigator.clipboard.writeText(inviteLink);
+    alert("Invite link copied to clipboard! Share it with your community members.");
+    setShowInviteModal(false);
+  };
 
   const handleMarkAsPaid = async (transactionItem) => {
     try {
@@ -66,23 +125,30 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
 
   useEffect(() => {
     if (!groupId) return;
+    setLoading(true);
 
-    // 1. Fetch group details
-    const groupRef = query(collection(db, "groups")); // In real app, fetch by ID
-    const unsubscribeGroup = onSnapshot(groupRef, (snapshot) => {
-      const group = snapshot.docs.find(doc => doc.id === groupId);
-      if (group) setGroupDetails({ id: group.id, ...group.data() });
+    // 1. Fetch group details directly by ID
+    const groupDocRef = doc(db, "groups", groupId);
+    const unsubscribeGroup = onSnapshot(groupDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setGroupDetails({ id: snapshot.id, ...snapshot.data() });
+      } else {
+        console.warn("Group not found by ID:", groupId);
+        setGroupDetails(null); // Clear group details if not found
+        setLoading(false); // Stop loading if group not found
+      }
     });
 
     // 2. Fetch contributions for this group
     const q = query(
       collection(db, "transactions"), 
-      where("group_id", "==", groupId),
-      orderBy("timestamp", "desc")
+      where("group_id", "==", groupId)
     );
     
     const unsubscribeTrans = onSnapshot(q, (snapshot) => {
       const transData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Sort client-side to avoid index requirement
+      transData.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
       setContributions(transData);
       setLoading(false);
     }, (error) => {
@@ -111,12 +177,53 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
       });
     }
 
+    // 4. Fetch all members of this group
+    const membersQuery = query(
+      collection(db, "members"), 
+      where("group_id", "==", groupId)
+    );
+    const unsubscribeMembers = onSnapshot(membersQuery, (snapshot) => {
+      const membersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Sort client-side
+      membersData.sort((a, b) => (b.joined_at?.seconds || 0) - (a.joined_at?.seconds || 0));
+      setMembers(membersData);
+    }, (error) => {
+      console.warn("Members fetch failed:", error);
+    });
+
     return () => {
       unsubscribeGroup();
       unsubscribeTrans();
       unsubscribeRole();
+      unsubscribeMembers();
     };
   }, [groupId, currentUser]);
+
+  if (loading && !groupDetails) {
+    return (
+      <MainLayout theme={theme} toggleTheme={toggleTheme}>
+        <div className="flex-center" style={{ height: '70vh', flexDirection: 'column', gap: '1rem' }}>
+          <div className="spinner"></div>
+          <p className="text-muted">Loading Workspace...</p>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!loading && !groupDetails) {
+    return (
+      <MainLayout theme={theme} toggleTheme={toggleTheme}>
+        <div className="flex-center" style={{ height: '70vh', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ padding: '2rem', background: 'var(--accent-light)', borderRadius: '50%', marginBottom: '1rem' }}>
+             <X size={48} color="var(--primary-dark)" />
+          </div>
+          <h3>Group Namespace Empty</h3>
+          <p className="text-muted" style={{ maxWidth: '350px', textAlign: 'center' }}>The community you are looking for does not exist or you don't have access permissions.</p>
+          <button className="btn-primary" style={{ marginTop: '1rem' }} onClick={() => navigate('/groups')}>Discover Communities</button>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
@@ -131,10 +238,74 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
           </button>
           <div>
             <h1>{groupDetails?.name || 'Group Workspace'}</h1>
-            <p className="text-sub">Manage contributions and communicate with your community.</p>
+            <p className="text-sub">
+              {members.length} Members • Manage contributions and communicate with your community.
+            </p>
           </div>
         </div>
+        <div className="flex gap-1">
+          {userRole === 'admin' && (
+            <button className="btn-secondary" onClick={() => setShowAddMemberModal(true)}>
+              + Add Member
+            </button>
+          )}
+          <button className="btn-primary" onClick={handleInvite}>
+            <UserPlus size={18} /> Invite
+          </button>
+        </div>
       </header>
+
+      {showAddMemberModal && (
+        <div className="modal-overlay">
+          <div className="glass modal-content" style={{ maxWidth: '450px' }}>
+            <h2>Manual Member Insertion</h2>
+            <p className="text-sub" style={{ marginBottom: '1.5rem' }}>Directly add a registered NjangiPay user to your community.</p>
+            <form onSubmit={handleManualAddMember}>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label">Member Email</label>
+                <input 
+                  type="email" 
+                  className="auth-input" 
+                  style={{ width: '100%' }}
+                  placeholder="name@example.com"
+                  value={newMemberEmail}
+                  onChange={e => setNewMemberEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex gap-1">
+                <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowAddMemberModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Add to Roster</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showInviteModal && (
+        <div className="modal-overlay">
+          <div className="glass modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <div className="stat-icon" style={{ margin: '0 auto 1.5rem', background: '#e8f8f5', color: 'var(--primary-green)' }}>
+              <UserPlus size={32} />
+            </div>
+            <h2>Invite Members</h2>
+            <p className="text-sub" style={{ marginBottom: '2rem' }}>
+              Share this secure link with people you want to join <strong>{groupDetails?.name}</strong>.
+            </p>
+            
+            <div className="flex gap-1" style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '10px', marginBottom: '2rem', fontSize: '0.85rem', wordBreak: 'break-all' }}>
+              <code>{window.location.origin}/groups?join={groupId}</code>
+            </div>
+
+            <div className="flex gap-1">
+              <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowInviteModal(false)}>Cancel</button>
+              <button className="btn-primary" style={{ flex: 1 }} onClick={copyInviteLink}>
+                <Copy size={16} /> Copy Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="workspace-tabs flex gap-1" style={{ marginBottom: '2rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
         <button 
@@ -151,11 +322,18 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
         >
           <PieChart size={18} /> Member Analytics
         </button>
+        <button 
+          className={`nav-item ${activeTab === 'members' ? 'active' : ''}`}
+          onClick={() => setActiveTab('members')}
+          style={{ border: 'none', background: 'none', cursor: 'pointer' }}
+        >
+          <UserPlus size={18} /> Members Roster
+        </button>
       </div>
 
       <div className="workspace-content-grid" style={{ 
         display: 'grid', 
-        gridTemplateColumns: activeTab === 'ledger' ? '1.5fr 1fr' : '1fr', 
+        gridTemplateColumns: (activeTab === 'ledger' || activeTab === 'members') ? '1.5fr 1fr' : '1fr', 
         gap: '2rem' 
       }}>
         <div className="left-panel">
@@ -231,6 +409,53 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
                 </table>
               </div>
             </div>
+          ) : activeTab === 'members' ? (
+            <div className="glass card" style={{ padding: '0' }}>
+              <div className="flex-between" style={{ padding: '2rem', borderBottom: '1px solid var(--glass-border)' }}>
+                <h3 style={{ margin: 0 }}>Community Roster ({members.length})</h3>
+                <div className="badge">{members.filter(m => m.status === 'active').length} Active Now</div>
+              </div>
+              <div className="data-table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Role</th>
+                      <th>Joined</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members.map(member => (
+                      <tr key={member.id}>
+                        <td>
+                          <div className="flex gap-1" style={{ alignItems: 'center' }}>
+                            <div className="avatar" style={{ width: '36px', height: '36px', background: 'var(--accent-light)', color: 'var(--primary-dark)' }}>
+                              {(member.userName || 'U').substring(0, 1).toUpperCase()}
+                            </div>
+                            <div>
+                               <p style={{ fontWeight: '700', margin: 0 }}>{member.userName || 'Verified User'}</p>
+                               <p className="text-muted" style={{ fontSize: '0.75rem', margin: 0 }}>NP-{member.user_id?.substring(0,8).toUpperCase()}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.85rem', fontWeight: '600', textTransform: 'capitalize' }}>{member.role || 'Member'}</span>
+                        </td>
+                        <td className="text-muted" style={{ fontSize: '0.85rem' }}>
+                          {member.joined_at?.toDate ? member.joined_at.toDate().toLocaleDateString() : 'Recent'}
+                        </td>
+                        <td>
+                          <span className={`status-pill ${member.status === 'active' ? 'status-paid' : 'status-pending'}`} style={{ fontSize: '0.7rem' }}>
+                            {member.status || 'Active'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           ) : (
             <div className="analytics-view flex-column" style={{ gap: '2rem' }}>
               <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
@@ -277,7 +502,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
           )}
         </div>
 
-        {activeTab === 'ledger' && (
+        {(activeTab === 'ledger' || activeTab === 'members') && (
           <div className="right-panel">
             <CommunityChat groupId={groupId} />
           </div>

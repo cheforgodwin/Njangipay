@@ -1,5 +1,5 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest, onCall } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { PredictionServiceClient } = require("@google-cloud/aiplatform");
 const axios = require("axios");
@@ -12,44 +12,42 @@ const aiClient = new PredictionServiceClient();
 
 /**
  * Cloud Function to get AI response for the chat assistant.
- * Using onRequest with manual CORS for maximum compatibility.
+ * Using onCall for modern Firebase Function integration.
  */
-exports.getAiResponse = onRequest({ maxInstances: 10 }, (request, response) => {
-  cors(request, response, async () => {
-    try {
-      // 1. Validate request
-      const userQuery = request.body?.query;
-      if (!userQuery) {
-        return response.status(400).send({ error: "No query provided." });
-      }
-
-      // 2. Fetch API Key
-      const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_AI_API_KEY;
-      if (!apiKey) {
-        console.error("CRITICAL: GEMINI_API_KEY is missing.");
-        return response.status(500).send({ error: "AI Backend unconfigured." });
-      }
-
-      const prompt = `You are the NjangiPay Financial AI Expert. User Query: ${userQuery}. (Keep it concise, under 3 sentences).`;
-
-      // 3. API Call
-      const geminiRes = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        { contents: [{ parts: [{ text: prompt }] }] },
-        { headers: { 'Content-Type': 'application/json' }, timeout: 8000 }
-      );
-
-      const aiText = geminiRes.data.candidates?.[0]?.content?.parts?.[0]?.text;
-      return response.send({ text: aiText || "I couldn't generate a response." });
-
-    } catch (error) {
-      console.error("Function Error:", error.message);
-      return response.status(500).send({ 
-        error: "The AI is momentarily unavailable.",
-        details: error.message 
-      });
+exports.getAiResponse = onCall({ maxInstances: 10 }, async (request) => {
+  try {
+    // 1. Validate request
+    const userQuery = request.data?.query;
+    if (!userQuery) {
+      return { error: "No query provided." };
     }
-  });
+
+    // 2. Fetch API Key
+    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_AI_API_KEY;
+    if (!apiKey) {
+      console.error("CRITICAL: GEMINI_API_KEY is missing.");
+      return { error: "AI Backend unconfigured." };
+    }
+
+    const prompt = `You are the NjangiPay Financial AI Expert. User Query: ${userQuery}. (Keep it concise, under 3 sentences).`;
+
+    // 3. API Call
+    const geminiRes = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      { contents: [{ parts: [{ text: prompt }] }] },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 8000 }
+    );
+
+    const aiText = geminiRes.data.candidates?.[0]?.content?.parts?.[0]?.text;
+    return { text: aiText || "I couldn't generate a response." };
+
+  } catch (error) {
+    console.error("Function Error:", error.message);
+    return { 
+      error: "The AI is momentarily unavailable.",
+      details: error.message 
+    };
+  }
 });
 
 /**
@@ -109,10 +107,38 @@ exports.calculateAiRisk = onDocumentCreated("transactions/{transactionId}", asyn
         aiRiskScore = predictionResponse.predictions[0].score || 0.5;
         defaultRisk = predictionResponse.predictions[0].defaultProb || 0.05;
     } else {
-        // Fallback: Simplified AI logic for demonstration
-        aiRiskScore = Math.max(0, 1 - (defaults * 0.2) - (totalTransactions * 0.01));
-        defaultRisk = defaults > 0 ? 0.3 : 0.05;
-        console.log("Using fallback AI logic for NjangiPay risk calculation.");
+        // Use Gemini API for advanced risk pattern analysis as a powerful secondary model
+        const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_AI_API_KEY;
+        if (apiKey) {
+            try {
+                const historySummary = history.map(t => `${t.type}: ${t.amount} (${t.status})`).join(", ");
+                const riskPrompt = `Analyze this transaction history for NjangiPay (community savings): ${historySummary}. 
+                Output ONLY a JSON object: {"score": 0.0-1.0, "reason": "concise explanation"}. 
+                1.0 is safe, 0.0 is high risk.`;
+
+                const geminiRes = await axios.post(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+                    { contents: [{ parts: [{ text: riskPrompt }] }] },
+                    { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
+                );
+
+                const aiResponse = geminiRes.data.candidates?.[0]?.content?.parts?.[0]?.text;
+                const aiData = JSON.parse(aiResponse.replace(/```json|```/g, ""));
+                
+                aiRiskScore = aiData.score || 0.5;
+                defaultRisk = 1 - aiRiskScore;
+                console.log(`Gemini AI Risk Assessment: ${aiRiskScore} - ${aiData.reason}`);
+            } catch (err) {
+                console.error("Gemini Risk Analysis failed, using fallback logic.");
+                aiRiskScore = Math.max(0, 1 - (defaults * 0.2) - (totalTransactions * 0.01));
+                defaultRisk = defaults > 0 ? 0.3 : 0.05;
+            }
+        } else {
+            // Basic fallback logic
+            aiRiskScore = Math.max(0, 1 - (defaults * 0.2) - (totalTransactions * 0.01));
+            defaultRisk = defaults > 0 ? 0.3 : 0.05;
+            console.log("Using basic fallback AI logic for NjangiPay risk calculation.");
+        }
     }
 
     // 4. Update Member's risk score
