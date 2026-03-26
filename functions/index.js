@@ -89,6 +89,8 @@ exports.calculateAiRisk = onDocumentCreated("transactions/{transactionId}", asyn
 
     let defaultRisk = 0.05; // Default fallback risk
     let aiRiskScore = 0.5;
+    let aiReason = "Standard profile analysis";
+    let aiTrustLevel = "Standard";
 
     // Use Vertex AI client if configured, otherwise use a simulated calculation logic
     if (endpointId !== "AI_RISK_MODEL_ENDPOINT") {
@@ -111,10 +113,15 @@ exports.calculateAiRisk = onDocumentCreated("transactions/{transactionId}", asyn
         const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_AI_API_KEY;
         if (apiKey) {
             try {
-                const historySummary = history.map(t => `${t.type}: ${t.amount} (${t.status})`).join(", ");
-                const riskPrompt = `Analyze this transaction history for NjangiPay (community savings): ${historySummary}. 
-                Output ONLY a JSON object: {"score": 0.0-1.0, "reason": "concise explanation"}. 
-                1.0 is safe, 0.0 is high risk.`;
+                const historySummary = history.map(t => `${t.type}: ${t.amount} XAF (${t.status}) on ${t.timestamp?.toDate ? t.timestamp.toDate().toDateString() : 'N/A'}`).join(", ");
+                const riskPrompt = `Analyze this transaction history for NjangiPay (community savings platform). 
+                Borrower History: ${historySummary}.
+                Evaluate:
+                1. Savings Consistency: Do they contribute regularly?
+                2. Volume vs Frequency: High volume with low frequency is riskier than steady small amounts.
+                3. Repayment history: Check for defaults or delays.
+                Output ONLY a valid JSON object: {"score": 0.0-1.0, "reason": "concise explanation", "trustLevel": "Trusted|Standard|Monitoring"}.
+                Score: 1.0 (Safe), 0.0 (High Risk). Reason must be under 15 words.`;
 
                 const geminiRes = await axios.post(
                     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -123,11 +130,15 @@ exports.calculateAiRisk = onDocumentCreated("transactions/{transactionId}", asyn
                 );
 
                 const aiResponse = geminiRes.data.candidates?.[0]?.content?.parts?.[0]?.text;
-                const aiData = JSON.parse(aiResponse.replace(/```json|```/g, ""));
+                // Robust JSON parsing
+                const jsonMatch = aiResponse.match(/\{.*\}/s);
+                const aiData = JSON.parse(jsonMatch ? jsonMatch[0] : aiResponse);
                 
                 aiRiskScore = aiData.score || 0.5;
                 defaultRisk = 1 - aiRiskScore;
-                console.log(`Gemini AI Risk Assessment: ${aiRiskScore} - ${aiData.reason}`);
+                aiReason = aiData.reason || "AI assessment completed.";
+                aiTrustLevel = aiData.trustLevel || "Standard";
+                console.log(`Gemini AI Risk Assessment: ${aiRiskScore} (${aiTrustLevel}) - ${aiReason}`);
             } catch (err) {
                 console.error("Gemini Risk Analysis failed, using fallback logic.");
                 aiRiskScore = Math.max(0, 1 - (defaults * 0.2) - (totalTransactions * 0.01));
@@ -155,6 +166,8 @@ exports.calculateAiRisk = onDocumentCreated("transactions/{transactionId}", asyn
       await memberDoc.ref.update({
         aiRiskScore: parseFloat(aiRiskScore.toFixed(2)),
         defaultRisk: parseFloat(defaultRisk.toFixed(2)),
+        aiRiskReason: aiReason || "Calculated via transaction patterns",
+        trustLevel: aiTrustLevel || "Standard",
         lastAiAssessment: admin.firestore.FieldValue.serverTimestamp()
       });
       console.log(`Risk score updated for user ${userId} in group ${transactionData.group_id}`);

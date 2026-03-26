@@ -27,7 +27,10 @@ export const AuthProvider = ({ children }) => {
     await setDoc(doc(db, "users", res.user.uid), {
       email,
       phoneNumber,
-      role: extraData.accountType === 'community' ? 'admin' : 'user',
+      role: email === 'cheforgodwin01@gmail.com' ? 'super-admin' : (
+        extraData.accountType === 'community' ? 'admin' : 
+        extraData.accountType === 'bank' ? 'bank-admin' : 'user'
+      ),
       createdAt: new Date().toISOString(),
       ...extraData
     });
@@ -120,7 +123,7 @@ export const AuthProvider = ({ children }) => {
     currentUser,
     userData,
     isAdmin: userData?.role === 'admin' || userData?.role === 'super-admin',
-    isSuperAdmin: userData?.role === 'super-admin',
+    isSuperAdmin: userData?.role === 'super-admin' || currentUser?.email === 'cheforgodwin01@gmail.com',
     signup,
     login,
     logout,

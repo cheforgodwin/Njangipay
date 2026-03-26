@@ -19,7 +19,7 @@ import {
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
-import { processLoanFunding } from '../utils/transactionHelpers';
+import { processLoanFunding, processLoanRepayment } from '../utils/transactionHelpers';
 import MainLayout from './MainLayout';
 import { collection, query, onSnapshot, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc, increment, where, getDocs } from 'firebase/firestore';
 import './Dashboard.css';
@@ -42,6 +42,8 @@ const Marketplace = ({ theme, toggleTheme }) => {
   const [userBalance, setUserBalance] = useState(0);
   const [userDocId, setUserDocId] = useState(null);
   const [userRiskScore, setUserRiskScore] = useState(0.85);
+  const [view, setView] = useState('market'); // 'market' or 'portfolio'
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!currentUser) return;
@@ -142,6 +144,50 @@ const Marketplace = ({ theme, toggleTheme }) => {
       setLoading(false);
     }
   };
+  
+  const handleRepayLoan = async (loan) => {
+    if (!currentUser) return;
+    
+    const interestRate = parseInt(loan.interest) || 5;
+    const totalRepay = loan.amount + (loan.amount * interestRate / 100);
+    
+    if (userBalance < totalRepay) {
+      alert(`Insufficient balance. You need ${totalRepay.toLocaleString()} XAF to repay this loan.`);
+      return;
+    }
+
+    const confirm = window.confirm(`Repay loan of ${loan.amount.toLocaleString()} XAF + ${interestRate}% interest? Total: ${totalRepay.toLocaleString()} XAF will be deducted.`);
+    if (!confirm) return;
+
+    setLoading(true);
+    try {
+      const result = await processLoanRepayment(currentUser.uid, loan);
+      if (result.success) {
+        alert("Loan Repaid Successfully!");
+      } else {
+        alert(`Repayment failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Repayment error:", error);
+      alert("Failed to repay loan.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredLoans = loanRequests.filter(req => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = (req.user?.toLowerCase().includes(query) || 
+                          req.purpose?.toLowerCase().includes(query) ||
+                          req.id?.toLowerCase().includes(query));
+    
+    if (view === 'market') {
+      return matchesSearch && req.status === 'open' && req.user_id !== currentUser?.uid;
+    } else {
+      // Portfolio view: User is either the borrower or the funder
+      return matchesSearch && (req.user_id === currentUser?.uid || req.fundedBy === currentUser?.uid);
+    }
+  });
 
   return (
     <div className="sidebar-layout">
@@ -175,11 +221,17 @@ const Marketplace = ({ theme, toggleTheme }) => {
       <main className="dashboard-main">
         <header className="dashboard-header">
           <div>
-            <h1>Loan Marketplace</h1>
-            <p className="text-sub">Fund community requests and earn competitive returns.</p>
+            <h1>{view === 'market' ? 'Loan Marketplace' : 'My Portfolio'}</h1>
+            <p className="text-sub">
+              {view === 'market' 
+                ? 'Fund community requests and earn competitive returns.' 
+                : 'Manage your active loans and investments.'}
+            </p>
           </div>
           <div className="flex gap-1">
-             <button className="btn-secondary" onClick={() => navigate('/wallet')}>My Portfolio</button>
+             <button className="btn-secondary" onClick={() => setView(view === 'market' ? 'portfolio' : 'market')}>
+               {view === 'market' ? 'My Portfolio' : 'Back to Market'}
+             </button>
              <button className="btn-primary" onClick={() => setShowLoanModal(true)}>Post Loan Request</button>
           </div>
         </header>
@@ -255,10 +307,9 @@ const Marketplace = ({ theme, toggleTheme }) => {
                 <Search className="search-icon" size={18} />
                 <input 
                   type="text" 
-                  id="loan-search"
-                  name="search"
-                  placeholder="Search loan requests..." 
-                  aria-label="Search loan requests"
+                  placeholder="Search loans..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <button className="btn-secondary"><Filter size={18} /> Filters</button>
@@ -267,8 +318,8 @@ const Marketplace = ({ theme, toggleTheme }) => {
             <div className="flex" style={{ flexDirection: 'column', gap: '1.5rem' }}>
               {loading ? (
                 <div className="flex-center" style={{ height: '200px' }}>Analyzing Trust Ledger...</div>
-              ) : (
-                loanRequests.map((req) => (
+              ) : filteredLoans.length > 0 ? (
+                filteredLoans.map((req) => (
                   <div key={req.id} className="glass card">
                      <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
                         <div className="flex gap-1" style={{ alignItems: 'center' }}>
@@ -288,7 +339,7 @@ const Marketplace = ({ theme, toggleTheme }) => {
                         </div>
                      </div>
 
-                     <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', padding: '1.5rem', background: 'var(--accent-light)', borderRadius: '12px' }}>
+                     <div className="grid grid-4" style={{ gap: '1rem', padding: '1.5rem', background: 'var(--accent-light)', borderRadius: '12px' }}>
                         <div>
                            <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>Amount</p>
                            <p style={{ fontWeight: '800', fontSize: '1.1rem' }}>{req.amount?.toLocaleString() || req.amount} XAF</p>
@@ -309,19 +360,46 @@ const Marketplace = ({ theme, toggleTheme }) => {
                         </div>
                      </div>
 
-                     <div className="flex gap-1" style={{ marginTop: '1.5rem' }}>
-                        <button 
-                          className="btn-primary" 
-                          style={{ flex: 2 }} 
-                          onClick={() => handleFundLoan(req)}
-                          disabled={req.status === 'funded'}
-                        >
-                           {req.status === 'funded' ? 'Funded' : 'Fund Loan'} <ArrowUpRight size={18} />
-                        </button>
+                      <div className="flex gap-1" style={{ marginTop: '1.5rem' }}>
+                        {view === 'market' ? (
+                          <button 
+                            className="btn-primary" 
+                            style={{ flex: 2 }} 
+                            onClick={() => handleFundLoan(req)}
+                            disabled={req.status === 'funded' || req.status === 'repaid'}
+                          >
+                             {req.status === 'funded' ? 'Funded' : req.status === 'repaid' ? 'Repaid' : 'Fund Loan'} <ArrowUpRight size={18} />
+                          </button>
+                        ) : (
+                          <>
+                            {req.user_id === currentUser?.uid && req.status === 'funded' && (
+                              <button 
+                                className="btn-primary" 
+                                style={{ flex: 2, background: 'var(--primary-dark)' }} 
+                                onClick={() => handleRepayLoan(req)}
+                              >
+                                Repay Loan <CreditCard size={18} />
+                              </button>
+                            )}
+                            <div className="badge" style={{ flex: 1, justifyContent: 'center', height: 'auto', padding: '10px' }}>
+                              Status: {req.status?.toUpperCase()}
+                            </div>
+                          </>
+                        )}
                         <button className="btn-secondary" style={{ flex: 1 }}>Details</button>
-                     </div>
-                  </div>
+                      </div>
+                   </div>
                 ))
+              ) : (
+                <div className="glass card flex-center" style={{ padding: '3rem', flexDirection: 'column', gap: '1rem', textAlign: 'center' }}>
+                  <ShoppingBag size={48} color="var(--text-muted)" />
+                  <h3>No loans found</h3>
+                  <p className="text-muted">
+                    {view === 'market' 
+                      ? "There are no open loan requests matching your criteria." 
+                      : "You don't have any active loans or investments in your portfolio yet."}
+                  </p>
+                </div>
               )}
             </div>
           </div>

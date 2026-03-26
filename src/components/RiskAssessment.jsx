@@ -9,7 +9,8 @@ import {
   LayoutDashboard,
   Wallet,
   Users,
-  Target
+  Target,
+  BrainCircuit
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
@@ -91,7 +92,7 @@ const handleRecalculate = async (memberId, currentScore) => {
           <div className="loader">Analyzing scores...</div>
         </div>
       ) : (
-        <div className="dashboard-grid">
+        <div className="grid grid-3">
           {riskData.map((member) => (
             <div key={member.id} className="glass card flex" style={{ flexDirection: 'column', borderLeft: `6px solid ${getRiskColor(member.aiRiskScore)}` }}>
               <div className="flex-between" style={{ marginBottom: '1.5rem' }}>

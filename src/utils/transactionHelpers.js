@@ -185,3 +185,72 @@ export const processLoanFunding = async (funderUid, loanRequest) => {
     return { success: false, error: error.message };
   }
 };
+
+/**
+ * Atomically process loan repayment.
+ */
+export const processLoanRepayment = async (borrowerUid, loanRequest) => {
+  try {
+    await runTransaction(db, async (transaction) => {
+      // 1. Get Borrower User Doc
+      const borrowerQuery = query(collection(db, "users"), where("uid", "==", borrowerUid), limit(1));
+      const borrowerSnapArr = await getDocs(borrowerQuery);
+      if (borrowerSnapArr.empty) throw new Error("Borrower not found.");
+      const borrowerDoc = borrowerSnapArr.docs[0];
+      const borrowerRef = doc(db, "users", borrowerDoc.id);
+      
+      const borrowerData = (await transaction.get(borrowerRef)).data();
+      const interestRate = parseInt(loanRequest.interest) || 5;
+      const interestAmount = (loanRequest.amount * interestRate) / 100;
+      const totalRepayment = loanRequest.amount + interestAmount;
+
+      if (borrowerData.balance < totalRepayment) {
+        throw new Error("Insufficient balance for repayment.");
+      }
+
+      // 2. Get Funder (Lender) User Doc
+      const funderQuery = query(collection(db, "users"), where("uid", "==", loanRequest.fundedBy), limit(1));
+      const funderSnapArr = await getDocs(funderQuery);
+      if (funderSnapArr.empty) throw new Error("Lender user record not found.");
+      const funderDoc = funderSnapArr.docs[0];
+      const funderRef = doc(db, "users", funderDoc.id);
+
+      // 3. Update Loan Request
+      const loanRef = doc(db, "loan_requests", loanRequest.id);
+      transaction.update(loanRef, {
+        status: 'repaid',
+        repaidAt: serverTimestamp()
+      });
+
+      // 4. Update Balances
+      transaction.update(borrowerRef, { balance: increment(-totalRepayment) });
+      transaction.update(funderRef, { balance: increment(totalRepayment) });
+
+      // 5. Log Transactions
+      const borrowerTxnRef = doc(collection(db, "transactions"));
+      transaction.set(borrowerTxnRef, {
+        user_id: borrowerUid,
+        amount: totalRepayment,
+        type: "loan_repayment",
+        title: `Loan Repayment (${loanRequest.purpose || 'Marketplace Loan'})`,
+        timestamp: serverTimestamp(),
+        status: "completed"
+      });
+
+      const funderTxnRef = doc(collection(db, "transactions"));
+      transaction.set(funderTxnRef, {
+        user_id: loanRequest.fundedBy,
+        amount: totalRepayment,
+        type: "loan_collection",
+        title: `Repayment Received from ${loanRequest.user}`,
+        timestamp: serverTimestamp(),
+        status: "completed"
+      });
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Loan repayment error:", error);
+    return { success: false, error: error.message };
+  }
+};

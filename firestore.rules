@@ -65,7 +65,8 @@ service cloud.firestore {
 
     // Global System Events & Config (Super Admin Only)
     match /system_events/{eventId} {
-      allow read, write: if isSuperAdmin();
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
     }
 
     match /system_config/{configId} {

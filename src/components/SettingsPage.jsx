@@ -26,29 +26,13 @@ const SettingsPage = ({ theme, toggleTheme }) => {
     }
   };
 
-  const handleGrantAdmin = async () => {
-    if (!currentUser) return;
-    setUpdating(true);
-    try {
-      const userRef = doc(db, "users", currentUser.uid);
-      await updateDoc(userRef, {
-        role: 'super-admin'
-      });
-      alert("Role upgraded to Super Admin! Please refresh the page to see changes.");
-    } catch (error) {
-      console.error("Grant admin error:", error);
-      alert("Failed to upgrade role. Check if your user document exists in Firestore.");
-    } finally {
-      setUpdating(false);
-    }
-  };
 
   return (
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
       <main className="container" style={{ paddingTop: '1rem', paddingBottom: '6rem' }}>
         <h1 style={{ marginBottom: '2rem' }}>Settings</h1>
 
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'minmax(250px, 300px) 1fr' }}>
+        <div className="grid gap-2 settings-grid">
           <aside className="glass card" style={{ height: 'fit-content', padding: '1.5rem' }}>
             <div className="flex-center" style={{ flexDirection: 'column', paddingBottom: '2rem', borderBottom: '1px solid var(--glass-border)', marginBottom: '1.5rem' }}>
               <div className="avatar" style={{ width: '80px', height: '80px', fontSize: '2rem', marginBottom: '1rem' }}>
@@ -99,7 +83,7 @@ const SettingsPage = ({ theme, toggleTheme }) => {
             <form onSubmit={handleUpdateProfile}>
               <section style={{ marginBottom: '3rem' }}>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Profile Information</h2>
-                <div className="grid gap-1" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <div className="grid gap-1 grid-2">
                   <div className="form-group">
                     <label className="form-label" htmlFor="displayName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Display Name</label>
                     <input 
@@ -131,23 +115,6 @@ const SettingsPage = ({ theme, toggleTheme }) => {
               </section>
             </form>
 
-            <section style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '3rem' }}>
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: '#e74c3c' }}>Developer: Super Admin Controls</h2>
-              <div className="flex-between glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid #fdedec' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>Grant Super Admin Role</h3>
-                  <p className="text-sub" style={{ fontSize: '0.9rem' }}>Instantly upgrade your account to super-admin status for testing.</p>
-                </div>
-                <button 
-                  onClick={handleGrantAdmin} 
-                  className="btn-primary"
-                  style={{ background: '#e74c3c', border: 'none' }}
-                  disabled={updating}
-                >
-                  Upgrade to Super Admin
-                </button>
-              </div>
-            </section>
           </div>
         </div>
       </main>

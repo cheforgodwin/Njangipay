@@ -17,9 +17,10 @@ import {
   BrainCircuit,
   Activity
 } from 'lucide-react';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
+import MainLayout from './MainLayout';
 import './Dashboard.css';
 
 const InvestorAnalytics = ({ theme, toggleTheme }) => {
@@ -71,30 +72,7 @@ const InvestorAnalytics = ({ theme, toggleTheme }) => {
   }, [currentUser]);
 
   return (
-    <div className="sidebar-layout">
-      <aside className="sidebar">
-        <div className="sidebar-logo logo">🌱 NjangiPay</div>
-        <div className="badge" style={{ margin: '0 20px 20px', background: '#34495e', color: 'white' }}>Capital Partner</div>
-        <nav className="sidebar-nav">
-          <Link to="/investor" className={`nav-item ${isLinkActive('/investor') ? 'active' : ''}`}>
-            <LayoutDashboard size={20} /> Portfolio Overview
-          </Link>
-          <Link to="/marketplace" className={`nav-item ${isLinkActive('/marketplace') ? 'active' : ''}`}>
-            <Target size={20} /> Opportunity Hub
-          </Link>
-          <Link to="/dashboard" className={`nav-item ${isLinkActive('/dashboard') ? 'active' : ''}`}>
-            <Activity size={20} /> Performance Logs
-          </Link>
-        </nav>
-
-        <div className="sidebar-footer" style={{ padding: '20px', borderTop: '1px solid var(--glass-border)' }}>
-          <button onClick={toggleTheme} className="theme-toggle-btn" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '600' }}>
-            {theme === 'light' ? <><Moon size={20} /> Dark Mode</> : <><Sun size={20} /> Light Mode</>}
-          </button>
-        </div>
-      </aside>
-
-      <main className="dashboard-main">
+    <MainLayout theme={theme} toggleTheme={toggleTheme}>
         <header className="dashboard-header">
           <div>
             <h1>Investor Intelligence</h1>
@@ -111,19 +89,19 @@ const InvestorAnalytics = ({ theme, toggleTheme }) => {
         </button>
         </header>
 
-        <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '2rem' }}>
+        <div className="grid grid-4" style={{ marginBottom: '2rem', gap: '1rem' }}>
           {portfolioStats.map((stat, i) => (
             <div key={i} className="glass card">
               <div className="stat-icon" style={{ background: `${stat.color}20`, color: stat.color, marginBottom: '1.5rem' }}>
                 {stat.icon}
               </div>
               <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '0.25rem' }}>{stat.label}</p>
-              <h2 style={{ fontSize: '1.8rem', margin: 0 }}>{stat.value}</h2>
+              <h2 style={{ fontSize: 'clamp(1.2rem, 5vw, 1.8rem)', margin: 0 }}>{stat.value}</h2>
             </div>
           ))}
         </div>
 
-        <div className="activity-grid" style={{ gridTemplateColumns: '1.5fr 1fr' }}>
+        <div className="activity-grid">
           <div className="glass card">
              <div className="flex-between" style={{ marginBottom: '2rem' }}>
                 <h3 style={{ margin: 0 }}>Capital Allocation by Risk</h3>
@@ -151,7 +129,7 @@ const InvestorAnalytics = ({ theme, toggleTheme }) => {
              <div className="flex-between" style={{ marginTop: '3rem', marginBottom: '1.5rem' }}>
                 <h3 style={{ margin: 0 }}>Cluster Performance</h3>
              </div>
-             <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+             <div className="grid grid-2" style={{ gap: '1rem' }}>
                 <div style={{ padding: '15px', background: 'var(--off-white)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
                    <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '5px' }}>Top Branch</p>
                    <p style={{ fontWeight: '700', margin: 0 }}>Yaoundé - Central</p>
@@ -193,8 +171,7 @@ const InvestorAnalytics = ({ theme, toggleTheme }) => {
              <button className="btn-secondary" style={{ width: 'calc(100% - 50px)', margin: '20px 25px' }}>Detailed Yield Report</button>
           </div>
         </div>
-      </main>
-    </div>
+    </MainLayout>
   );
 };
 

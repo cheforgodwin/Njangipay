@@ -20,11 +20,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from './Navbar';
+import Footer from './Footer';
 import logo from '../assets/logo.svg';
 import './Dashboard.css';
 
 const MainLayout = ({ children, theme, toggleTheme }) => {
-  const { isAdmin, isSuperAdmin, logout } = useAuth();
+  const { isAdmin, isSuperAdmin, logout, userData } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -122,18 +123,39 @@ const MainLayout = ({ children, theme, toggleTheme }) => {
             )}
 
             {/* QUICK LINKS FOR MODERATORS/ADMINS */}
-            {(isAdmin || isSuperAdmin) && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/super-admin') && (
+            {(isAdmin || isSuperAdmin || userData?.role === 'bank-admin') && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/super-admin') && !location.pathname.startsWith('/bank-dashboard') && (
               <div style={{ marginTop: '20px' }}>
                 <div style={{ margin: '15px 0 5px', padding: '0 12px', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '1px' }}>Admin Quick Links</div>
                 <Link to="/admin/communities" className="nav-item" onClick={closeSidebar}>
                    <Shield size={20} /> Admin Panel
                 </Link>
+                {(userData?.role === 'bank-admin' || isSuperAdmin) && (
+                   <Link to="/bank-dashboard" className="nav-item" onClick={closeSidebar}>
+                     <Building2 size={20} color="var(--primary-green)" /> Bank Portal
+                   </Link>
+                )}
                 {isSuperAdmin && (
                   <Link to="/super-admin" className="nav-item" onClick={closeSidebar}>
                     <Activity size={20} color="#e74c3c" /> Super Admin
                   </Link>
                 )}
               </div>
+            )}
+
+            {/* BANK DASHBOARD NAVIGATION */}
+            {location.pathname.startsWith('/bank-dashboard') && (
+               <>
+                 <Link to="/partners" className="nav-item" onClick={closeSidebar}>
+                   <Building2 size={20} /> Portal Overview
+                 </Link>
+                 <div style={{ margin: '15px 0 5px', padding: '0 12px', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '1px' }}>Bank Controls</div>
+                 <Link to="/bank-dashboard" className={`nav-item ${isLinkActive('/bank-dashboard') ? 'active' : ''}`} onClick={closeSidebar}>
+                   <Activity size={20} /> Clearing House
+                 </Link>
+                 <Link to="/investor" className="nav-item" onClick={closeSidebar}>
+                   <Target size={20} /> Asset IQ
+                 </Link>
+               </>
             )}
             
             <div style={{ margin: '15px 0 5px', padding: '0 12px', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '1px' }}>Support Tools</div>
@@ -154,6 +176,7 @@ const MainLayout = ({ children, theme, toggleTheme }) => {
 
         <main className="dashboard-main">
           {children}
+          <Footer />
         </main>
       </div>
     </div>
