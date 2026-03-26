@@ -9,17 +9,18 @@ import {
   Users, 
   Target, 
   CreditCard, 
-  Sun, 
-  Moon,
   Search,
   CheckCircle,
   XCircle,
   HelpCircle,
   Globe,
-  Shield
+  Shield,
+  Moon,
+  Sun
 } from 'lucide-react';
-import { collection, query, onSnapshot, orderBy, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import MainLayout from './MainLayout';
 import './Dashboard.css';
 
 const SupportDashboard = ({ theme, toggleTheme }) => {
@@ -86,50 +87,14 @@ const SupportDashboard = ({ theme, toggleTheme }) => {
   );
 
   return (
-    <div className="sidebar-layout">
-      <aside className="sidebar">
-        <div className="sidebar-logo logo">🌱 NjangiPay</div>
-        <div className="badge" style={{ margin: '0 20px 20px', background: 'var(--primary-green)', color: 'white' }}>Support Services</div>
-        <nav className="sidebar-nav">
-          <Link to="/dashboard" className={`nav-item ${isLinkActive('/dashboard') ? 'active' : ''}`}>
-            <LayoutDashboard size={20} /> Dashboard
-          </Link>
-          <Link to="/wallet" className={`nav-item ${isLinkActive('/wallet') ? 'active' : ''}`}>
-            <Wallet size={20} /> My Wallet
-          </Link>
-          <Link to="/groups" className={`nav-item ${isLinkActive('/groups') ? 'active' : ''}`}>
-            <Users size={20} /> Savings Groups
-          </Link>
-          <Link to="/marketplace" className={`nav-item ${isLinkActive('/marketplace') ? 'active' : ''}`}>
-            <Target size={20} /> Marketplace
-          </Link>
-          <Link to="/admin/communities" className={`nav-item ${isLinkActive('/admin/communities') ? 'active' : ''}`}>
-            <Globe size={20} /> Admin Panel
-          </Link>
-          <Link to="/admin/ai-risk-scores" className={`nav-item ${isLinkActive('/admin/ai-risk-scores') ? 'active' : ''}`}>
-            <Shield size={20} /> Risk Center
-          </Link>
-          <div style={{ margin: '15px 0 5px', padding: '0 12px', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '1px' }}>Support Tools</div>
-          <Link to="/support" className={`nav-item ${isLinkActive('/support') ? 'active' : ''}`}>
-            <MessageSquare size={20} /> Support Desk
-          </Link>
-        </nav>
-
-        <div className="sidebar-footer" style={{ padding: '20px', borderTop: '1px solid var(--glass-border)' }}>
-          <button onClick={toggleTheme} className="theme-toggle-btn" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '600' }}>
-            {theme === 'light' ? <><Moon size={20} /> Dark Mode</> : <><Sun size={20} /> Light Mode</>}
-          </button>
-        </div>
-      </aside>
-
-      <main className="dashboard-main">
+    <MainLayout theme={theme} toggleTheme={toggleTheme}>
         <header className="dashboard-header">
           <div>
             <h1>Support & Verification</h1>
             <p className="text-sub">Review user inquiries and verify community registrations.</p>
           </div>
           <div className="search-filter-bar" style={{ margin: 0 }}>
-             <div className="search-input-wrapper" style={{ width: '300px' }}>
+             <div className="search-input-wrapper" style={{ width: '100%', maxWidth: '300px' }}>
                 <Search size={18} className="search-icon" />
                 <input 
                   type="text" 
@@ -141,7 +106,7 @@ const SupportDashboard = ({ theme, toggleTheme }) => {
           </div>
         </header>
 
-        <div className="activity-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) 350px' }}>
+        <div className="activity-grid">
           <div className="glass card" style={{ padding: '0', overflow: 'hidden' }}>
             <div className="flex-between" style={{ padding: '25px', borderBottom: '1px solid var(--glass-border)' }}>
               <div className="flex gap-1" style={{ alignItems: 'center' }}>
@@ -154,7 +119,7 @@ const SupportDashboard = ({ theme, toggleTheme }) => {
             <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
               {loading ? (
                 <div className="flex-center" style={{ height: '200px' }}>Syncing with Support Mesh...</div>
-              ) : filteredTickets.map((ticket, i) => (
+              ) : filteredTickets.map((ticket) => (
                 <div key={ticket.id} className="flex-between" style={{ padding: '25px', borderBottom: '1px solid var(--glass-border)', cursor: 'pointer' }}>
                    <div className="flex gap-1">
                       <div className="flex-center" style={{ width: '45px', height: '45px', borderRadius: '12px', background: 'var(--accent-light)', fontWeight: '700' }}>
@@ -181,7 +146,7 @@ const SupportDashboard = ({ theme, toggleTheme }) => {
           <div className="flex" style={{ flexDirection: 'column', gap: '2rem' }}>
             <div className="glass card">
                <h3 className="flex gap-1" style={{ marginBottom: '1.5rem', alignItems: 'center' }}>
-                  <UserCheck color="var(--primary-green)" /> User Verification
+                  <UserCheck color="var(--primary-green)" size={20} /> User Verification
                </h3>
                <div style={{ flexDirection: 'column', display: 'flex', gap: '1.5rem' }}>
                   {verifications.filter(v => v.status === 'pending').map((v) => (
@@ -207,8 +172,7 @@ const SupportDashboard = ({ theme, toggleTheme }) => {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </MainLayout>
   );
 };
 

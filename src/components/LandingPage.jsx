@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Navbar from './Navbar';
 import FeaturesSection from './FeaturesSection';
+import Footer from './Footer';
 
 import heroBg from '../assets/njangipay_hero_bg.png';
 
@@ -105,6 +106,7 @@ const LandingPage = ({ theme, toggleTheme }) => {
            </div>
         </section>
       </main>
+      <Footer />
     </div>
   );
 };

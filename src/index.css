@@ -196,3 +196,128 @@ a {
     font-size: 0.95rem;
   }
 }
+/* Footer Section */
+.footer-container {
+  background: var(--off-white);
+  border-top: 1px solid var(--glass-border);
+  padding: 5rem 0 2rem;
+  margin-top: 5rem;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1.2fr;
+  gap: 3rem;
+  margin-bottom: 4rem;
+}
+
+[data-theme='dark'] .footer-container {
+  background: #0f172a;
+}
+
+.footer-brand .footer-logo {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  display: flex !important;
+}
+
+.footer-tagline {
+  margin-bottom: 2rem;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--text-sub);
+}
+
+.social-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.social-links a {
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.social-links a:hover {
+  color: var(--primary-green);
+}
+
+.footer-links h3, .footer-contact h3 {
+  font-size: 1.25rem;
+  margin-bottom: 2rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.footer-links ul, .footer-contact ul {
+  list-style: none;
+}
+
+.footer-links li, .footer-contact li {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  color: var(--text-sub);
+}
+
+.footer-links a:hover {
+  color: var(--primary-green);
+  text-decoration: underline;
+}
+
+.footer-contact li {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer-badge {
+  background: rgba(46, 204, 113, 0.1);
+  color: var(--primary-dark);
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  margin-top: 1.5rem !important;
+  border: 1px solid rgba(46, 204, 113, 0.2);
+}
+
+.footer-bottom {
+  border-top: 1px solid var(--glass-border);
+  padding-top: 2rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.footer-legal {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.footer-legal a:hover {
+  color: var(--primary-green);
+}
+
+/* Responsive Footer */
+@media (max-width: 992px) {
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem 2rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+  
+  .footer-bottom .flex-between {
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+  }
+  
+  .footer-legal {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}

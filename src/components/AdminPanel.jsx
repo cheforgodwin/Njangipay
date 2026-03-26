@@ -102,7 +102,7 @@ const AdminPanel = ({ theme, toggleTheme }) => {
         </button>
       </header>
 
-      <div className="dashboard-grid">
+      <div className="grid grid-3">
         {loading ? (
              <div className="flex-center" style={{ gridColumn: '1/-1', height: '300px' }}>Loading clusters...</div>
         ) : communities.map((community) => (

@@ -23,6 +23,7 @@ const UserDashboard = ({ theme, toggleTheme }) => {
   const [recentActivity, setRecentActivity] = useState([]);
   const [userGroups, setUserGroups] = useState([]);
   const [aiScore, setAiScore] = useState(0);
+  const [aiReason, setAiReason] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,9 +43,12 @@ const UserDashboard = ({ theme, toggleTheme }) => {
     const memberRef = query(collection(db, "members"), where("user_id", "==", currentUser.uid), limit(1));
     const unsubscribeMember = onSnapshot(memberRef, (snapshot) => {
       if (!snapshot.empty) {
-        setAiScore(snapshot.docs[0].data().aiRiskScore || 0.98);
+        const data = snapshot.docs[0].data();
+        setAiScore(data.aiRiskScore || 0.98);
+        setAiReason(data.aiRiskReason || "");
       } else {
         setAiScore(0.98); // Demo fallback
+        setAiReason("Consistent historical patterns");
       }
     });
 
@@ -93,14 +97,14 @@ const UserDashboard = ({ theme, toggleTheme }) => {
         </div>
       </header>
 
-      <div className="dashboard-grid">
+      <div className="grid grid-3" style={{ marginBottom: '2rem' }}>
         <div className="glass card wallet-card-primary">
           <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
             <Wallet />
             <Plus style={{ cursor: 'pointer' }} onClick={() => navigate('/wallet')} />
           </div>
           <p className="text-muted" style={{ fontSize: '0.9rem' }}>Total Saved Balance</p>
-          <h2 className="hero-title" style={{ fontSize: '2.5rem', margin: '0.5rem 0' }}>
+          <h2 className="hero-title" style={{ fontSize: 'clamp(1.5rem, 6vw, 2.5rem)', margin: '0.5rem 0' }}>
             {walletBalance.toLocaleString()} XAF
           </h2>
           <div className="flex gap-2" style={{ marginTop: '1.5rem', fontSize: '0.85rem' }}>
@@ -145,9 +149,9 @@ const UserDashboard = ({ theme, toggleTheme }) => {
              <Target size={18} color={aiScore > 0.8 ? "var(--primary-green)" : "#f39c12"} /> AI Credit Insight
            </h3>
            <p style={{ fontSize: '0.875rem', lineHeight: '1.5' }}>
-             Your trust score is at <span style={{ color: aiScore > 0.8 ? 'var(--primary-green)' : '#f39c12', fontWeight: '700' }}>{(aiScore * 100).toFixed(0)}%</span>. 
-             {aiScore > 0.8 ? " You are eligible for an immediate loan expansion." : " Maintain regular contributions to increase your score."}
+             Your trust score is at <span style={{ color: aiScore > 0.8 ? 'var(--primary-green)' : '#f39c12', fontWeight: '700' }}>{(aiScore * 100).toFixed(0)}%</span>.
            </p>
+           {aiReason && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem', fontStyle: 'italic' }}>"{aiReason}"</p>}
            <button className="btn-primary" style={{ width: '100%', marginTop: 'auto' }} onClick={() => navigate('/marketplace')}>
              {aiScore > 0.8 ? "Apply for Loan" : "Improve Score"}
            </button>
@@ -184,7 +188,7 @@ const UserDashboard = ({ theme, toggleTheme }) => {
 
          <div className="glass card">
             <h3 style={{ marginBottom: '1.5rem' }}>Quick Actions</h3>
-            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="grid grid-2" style={{ gap: '1rem' }}>
                <div className="flex-center" style={{ flexDirection: 'column', padding: '1.5rem', borderRadius: '15px', background: '#f0fbf4', cursor: 'pointer' }} onClick={() => navigate('/wallet')}>
                   <Plus color="var(--primary-green)" style={{ marginBottom: '0.5rem' }} />
                   <p style={{ fontSize: '0.85rem', fontWeight: '600' }}>Deposit</p>

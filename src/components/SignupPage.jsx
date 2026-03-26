@@ -1,4 +1,4 @@
-import { Leaf, Mail, Lock, ArrowRight, Chrome, User, Phone, CheckCircle, Users } from 'lucide-react';
+import { Leaf, Mail, Lock, ArrowRight, Chrome, User, Phone, CheckCircle, Users, Building2 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -145,6 +145,13 @@ const SignupPage = ({ theme, toggleTheme }) => {
             >
               <Users size={14} /> Community Rep
             </button>
+            <button 
+               type="button" 
+               className={`chip ${accountType === 'bank' ? 'active' : ''}`}
+               onClick={() => setAccountType('bank')}
+            >
+              <Building2 size={14} /> Bank Partner
+            </button>
           </div>
 
           {!usePhone ? (
@@ -199,6 +206,24 @@ const SignupPage = ({ theme, toggleTheme }) => {
                     </div>
                   </div>
                 </>
+              )}
+
+              {accountType === 'bank' && (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="communityName">Bank Institution Name</label>
+                  <div className="input-wrapper">
+                    <Building2 className="input-icon" size={18} />
+                    <input 
+                      type="text" 
+                      id="communityName"
+                      className="auth-input"
+                      placeholder="e.g. Ecobank Cameroon" 
+                      value={communityName}
+                      onChange={(e) => setCommunityName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
               )}
 
               <div className="form-group">
@@ -257,7 +282,7 @@ const SignupPage = ({ theme, toggleTheme }) => {
                 style={{ width: '100%', marginTop: '1rem' }}
                 disabled={loading}
               >
-                {loading ? 'Creating Account...' : (accountType === 'community' ? 'Register Community' : 'Sign Up')} <ArrowRight size={18} />
+                {loading ? 'Creating Account...' : (accountType === 'community' ? 'Register Community' : accountType === 'bank' ? 'Partner with Nexus' : 'Sign Up')} <ArrowRight size={18} />
               </button>
             </form>
           ) : (

@@ -27,7 +27,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
   const [activeTab, setActiveTab] = useState('ledger'); // 'ledger', 'analytics', 'members', 'chat'
   const [groupDetails, setGroupDetails] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState('member'); // 'member', 'treasurer', 'president'
+  const [userRole, setUserRole] = useState('member'); // Derived from members state
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState('');
@@ -109,6 +109,18 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
     }
   };
 
+  const handleUpdateRole = async (memberId, newRole) => {
+    try {
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const memberRef = doc(db, "members", memberId);
+      await updateDoc(memberRef, { role: newRole });
+      alert(`Role updated to ${newRole}`);
+    } catch (error) {
+      console.error("Role update error:", error);
+      alert("Failed to update role.");
+    }
+  };
+
   const handleContribute = async () => {
     const amountStr = prompt('Enter contribution amount (XAF):');
     if (!amountStr) return;
@@ -161,22 +173,6 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
       setLoading(false);
     });
 
-    // 3. Fetch user's role in this specific group
-    let unsubscribeRole = () => {};
-    if (currentUser && groupId) {
-      const roleQuery = query(
-        collection(db, "members"), 
-        where("group_id", "==", groupId),
-        where("user_id", "==", currentUser.uid),
-        limit(1)
-      );
-      unsubscribeRole = onSnapshot(roleQuery, (snapshot) => {
-        if (!snapshot.empty) {
-          setUserRole(snapshot.docs[0].data().role || 'member');
-        }
-      });
-    }
-
     // 4. Fetch all members of this group
     const membersQuery = query(
       collection(db, "members"), 
@@ -194,10 +190,16 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
     return () => {
       unsubscribeGroup();
       unsubscribeTrans();
-      unsubscribeRole();
       unsubscribeMembers();
     };
   }, [groupId, currentUser]);
+
+  useEffect(() => {
+    if (members.length > 0 && currentUser) {
+      const me = members.find(m => m.user_id === currentUser.uid);
+      if (me) setUserRole(me.role || 'member');
+    }
+  }, [members, currentUser]);
 
   if (loading && !groupDetails) {
     return (
@@ -228,7 +230,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
   return (
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
       <header className="dashboard-header">
-        <div className="flex gap-1" style={{ alignItems: 'center' }}>
+        <div className="flex gap-1" style={{ alignItems: 'center', justifyContent: 'center' }}>
           <button 
             className="btn-secondary" 
             style={{ padding: '0.5rem', borderRadius: '50%', width: '40px', height: '40px' }}
@@ -307,7 +309,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
         </div>
       )}
 
-      <div className="workspace-tabs flex gap-1" style={{ marginBottom: '2rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
+      <div className="workspace-tabs flex gap-1" style={{ marginBottom: '2rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem', overflowX: 'auto', whiteSpace: 'nowrap' }}>
         <button 
           className={`nav-item ${activeTab === 'ledger' ? 'active' : ''}`}
           onClick={() => setActiveTab('ledger')}
@@ -331,11 +333,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
         </button>
       </div>
 
-      <div className="workspace-content-grid" style={{ 
-        display: 'grid', 
-        gridTemplateColumns: (activeTab === 'ledger' || activeTab === 'members') ? '1.5fr 1fr' : '1fr', 
-        gap: '2rem' 
-      }}>
+      <div className="workspace-content-grid">
         <div className="left-panel">
           {activeTab === 'ledger' ? (
             <div className="glass card" style={{ padding: '0' }}>
@@ -440,7 +438,20 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
                           </div>
                         </td>
                         <td>
-                          <span style={{ fontSize: '0.85rem', fontWeight: '600', textTransform: 'capitalize' }}>{member.role || 'Member'}</span>
+                          {userRole === 'admin' && member.user_id !== currentUser.uid ? (
+                            <select 
+                              value={member.role || 'member'} 
+                              onChange={(e) => handleUpdateRole(member.id, e.target.value)}
+                              style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--glass-border)', fontSize: '0.8rem', background: 'white' }}
+                            >
+                              <option value="member">Member</option>
+                              <option value="treasurer">Treasurer</option>
+                              <option value="president">President</option>
+                              <option value="moderator">Moderator</option>
+                            </select>
+                          ) : (
+                            <span style={{ fontSize: '0.85rem', fontWeight: '600', textTransform: 'capitalize' }}>{member.role || 'Member'}</span>
+                          )}
                         </td>
                         <td className="text-muted" style={{ fontSize: '0.85rem' }}>
                           {member.joined_at?.toDate ? member.joined_at.toDate().toLocaleDateString() : 'Recent'}

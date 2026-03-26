@@ -277,15 +277,15 @@ const WalletPage = ({ theme, toggleTheme }) => {
                <span>Wallet Balance</span>
                <CreditCard size={20} />
             </div>
-            <h2 className="hero-title" style={{ fontSize: '3.5rem', margin: '0 0 40px 0', color: '#fff' }}>
+            <h2 className="hero-title" style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', margin: '0 0 40px 0', color: '#fff' }}>
               {balance.toLocaleString()} XAF
             </h2>
             
-            <div className="flex gap-1">
-               <button className="btn-primary" style={{ flex: 1, background: 'rgba(255,255,255,0.2)' }} onClick={() => setShowDepositModal(true)}>
+            <div className="flex gap-1" style={{ flexWrap: 'wrap' }}>
+               <button className="btn-primary" style={{ flex: '1 1 120px', background: 'rgba(255,255,255,0.2)' }} onClick={() => setShowDepositModal(true)}>
                   <Download size={18} /> Deposit
                </button>
-               <button className="btn-primary" style={{ flex: 1, background: 'white', color: 'var(--primary-green)' }} onClick={() => setShowTransferModal(true)}>
+               <button className="btn-primary" style={{ flex: '1 1 120px', background: 'white', color: 'var(--primary-green)' }} onClick={() => setShowTransferModal(true)}>
                   <ArrowUpRight size={18} /> Transfer
                </button>
             </div>

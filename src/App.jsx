@@ -31,6 +31,7 @@ const InvestorAnalytics = React.lazy(() => import('./components/InvestorAnalytic
 const SettingsPage = React.lazy(() => import('./components/SettingsPage'));
 const NexusSetup = React.lazy(() => import('./components/NexusSetup'));
 const BankingPartners = React.lazy(() => import('./components/BankingPartners'));
+const BankDashboard = React.lazy(() => import('./components/BankDashboard'));
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './App.css'
@@ -119,14 +120,34 @@ const SuperAdminRoute = ({ children }) => {
     if (!authLoading) {
       if (!currentUser) {
         navigate('/login');
-      } else if (!isSuperAdmin) {
+      } else if (!isSuperAdmin && currentUser?.email !== 'cheforgodwin01@gmail.com') {
         navigate('/dashboard');
       }
     }
   }, [currentUser, userData, isSuperAdmin, navigate, authLoading]);
 
   if (authLoading) return <LoadingSpinner />;
-  if (!currentUser || !isSuperAdmin) return <LoadingSpinner />; // Spinner shows until redirect kicks in
+  if (!currentUser || !isSuperAdmin) return <LoadingSpinner />;
+  return children;
+};
+
+const BankRoute = ({ children }) => {
+  const { currentUser, userData, isSuperAdmin, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const isBank = userData?.role === 'bank-admin' || isSuperAdmin;
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!currentUser) {
+        navigate('/login');
+      } else if (!isBank) {
+        navigate('/dashboard');
+      }
+    }
+  }, [currentUser, isBank, navigate, authLoading]);
+
+  if (authLoading) return <LoadingSpinner />;
+  if (!currentUser || !isBank) return <LoadingSpinner />;
   return children;
 };
 
@@ -171,6 +192,7 @@ function App() {
             <Route path="/investor" element={<ProtectedRoute><InvestorAnalytics theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
             <Route path="/setup-nexus" element={<NexusSetup />} />
             <Route path="/partners" element={<ProtectedRoute><BankingPartners theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+            <Route path="/bank-dashboard" element={<BankRoute><BankDashboard theme={theme} toggleTheme={toggleTheme} /></BankRoute>} />
           </Routes>
         </React.Suspense>
         

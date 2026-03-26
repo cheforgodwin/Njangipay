@@ -24,11 +24,9 @@ const GroupsPage = ({ theme, toggleTheme }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newGroup, setNewGroup] = useState({
-    name: '',
-    type: 'public',
-    focus: 'P2P Savings',
-    entry: '10,000',
-    description: ''
+    description: '',
+    frequency: 'Monthly',
+    meetingDay: 'Last Sunday'
   });
 
   useEffect(() => {
@@ -114,7 +112,7 @@ const GroupsPage = ({ theme, toggleTheme }) => {
       });
 
       setShowCreateModal(false);
-      setNewGroup({ name: '', type: 'public', focus: 'P2P Savings', entry: '10,000', description: '' });
+      setNewGroup({ name: '', type: 'public', focus: 'P2P Savings', entry: '10,000', description: '', frequency: 'Monthly', meetingDay: 'Last Sunday' });
       alert("Community circle created successfully!");
       navigate(`/group/${docRef.id}/contributions`);
     } catch (error) {
@@ -212,8 +210,34 @@ const GroupsPage = ({ theme, toggleTheme }) => {
                   style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
                 />
               </div>
-              <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div className="grid gap-1 grid-2" style={{ marginBottom: '15px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Frequency</label>
+                  <select 
+                    value={newGroup.frequency}
+                    onChange={(e) => setNewGroup({...newGroup, frequency: e.target.value})}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  >
+                    <option value="Weekly">Weekly</option>
+                    <option value="Monthly">Monthly</option>
+                    <option value="Bi-Weekly">Bi-Weekly</option>
+                    <option value="Quarterly">Quarterly</option>
+                    <option value="Custom">Custom Days</option>
+                  </select>
+                </div>
                 <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Meeting Day</label>
+                  <input 
+                    type="text" 
+                    value={newGroup.meetingDay} 
+                    onChange={(e) => setNewGroup({...newGroup, meetingDay: e.target.value})}
+                    placeholder="e.g. Last Sunday, Every 15th"
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-1 grid-2" style={{ marginBottom: '15px' }}>
+                <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Min Entry (XAF)</label>
                   <input 
                     type="text" 
@@ -280,7 +304,7 @@ const GroupsPage = ({ theme, toggleTheme }) => {
             <div>
               <h3 style={{ marginBottom: '0.5rem' }}>{group.name}</h3>
               <p className="text-sub" style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>
-                Circle focusing on <span style={{ color: 'var(--primary-dark)', fontWeight: '600' }}>{group.focus || 'P2P Savings'}</span> within the system.
+                {group.frequency || 'Monthly'} cycle • {group.meetingDay || 'Last Sunday'} • {group.focus || 'P2P Savings'}
               </p>
             </div>
 
