@@ -1,0 +1,104 @@
+/* AdminPanel.css */
+.admin-loading {
+  grid-column: 1 / -1;
+  height: 300px;
+}
+.admin-card {
+  flex-direction: column;
+  gap: 1rem;
+}
+.admin-icon {
+  margin: 0;
+}
+.admin-title {
+  margin-bottom: 0.25rem;
+}
+.admin-desc {
+  font-size: 0.85rem;
+}
+.admin-groups-container {
+  padding: 1rem;
+  background: var(--accent-light);
+  border-radius: 12px;
+}
+.admin-groups-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.admin-groups-list {
+  gap: 8px;
+}
+.admin-group-item {
+  font-size: 0.85rem;
+}
+.admin-group-mem {
+  font-weight: 600;
+}
+.admin-no-groups {
+  font-size: 0.8rem;
+}
+.admin-card-footer {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: auto;
+}
+.admin-btn-manage {
+  padding: 5px 15px;
+}
+.admin-add-card {
+  border: 2px dashed var(--glass-border);
+  background: transparent;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 1rem;
+}
+.admin-add-icon-box {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--accent-light);
+}
+.admin-add-text {
+  font-weight: 600;
+}
+
+/* Modal styles */
+.admin-modal-header {
+  margin-bottom: 1.5rem;
+}
+.admin-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.admin-modal-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.admin-modal-textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  resize: vertical;
+}
+.admin-modal-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--accent-light);
+  border-radius: 10px;
+}
+.admin-modal-info-text {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.admin-modal-actions {
+  margin-top: 1.5rem;
+}
+.admin-modal-btn {
+  flex: 1;
+}

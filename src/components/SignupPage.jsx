@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from './Navbar';
 import logo from '../assets/logo.svg';
+import { auth } from '../config/firebase';
 import './LoginPage.css'; // Reusing styles
 
 const SignupPage = ({ theme, toggleTheme }) => {
@@ -21,8 +22,15 @@ const SignupPage = ({ theme, toggleTheme }) => {
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signup, googleSignIn, setupRecaptcha, phoneSignIn, currentUser } = useAuth();
+  const { signup, googleSignIn, setupRecaptcha, phoneSignIn, currentUser, userData } = useAuth();
   const navigate = useNavigate();
+
+  const getRoleRedirect = (role) => {
+    if (role === 'super-admin') return '/super-admin';
+    if (role === 'bank-admin') return '/bank-dashboard';
+    if (role === 'admin') return '/admin/communities';
+    return '/dashboard';
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -44,7 +52,13 @@ const SignupPage = ({ theme, toggleTheme }) => {
         })
       };
 
-      await signup(email, password, phoneNumber, extraData);
+      const result = await signup(email, password, phoneNumber, extraData);
+      // Determine role from what was selected at signup
+      const role = email === 'cheforgodwin01@gmail.com' ? 'super-admin' : (
+        accountType === 'community' ? 'admin' :
+        accountType === 'bank' ? 'bank-admin' : 'user'
+      );
+      navigate(getRoleRedirect(role));
     } catch (err) {
       setError('Failed to create an account.');
       console.error(err);
@@ -81,18 +95,19 @@ const SignupPage = ({ theme, toggleTheme }) => {
     setLoading(false);
   }
 
-  useEffect(() => {
-    if (!loading && currentUser) {
-      navigate('/dashboard');
-    }
-  }, [currentUser, loading, navigate]);
+  // Instead of an abrupt auto-redirect on mount, we'll let the UI handle already-logged-in users
+  // to avoid confusion when testing.
 
   async function handleGoogleSignIn() {
     try {
       setError('');
       setLoading(true);
-      await googleSignIn();
-      navigate('/dashboard');
+      const result = await googleSignIn();
+      const { getDoc, doc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const snap = await getDoc(doc(db, 'users', result.user.uid));
+      const role = snap.exists() ? snap.data().role : 'user';
+      navigate(getRoleRedirect(role));
     } catch (err) {
       setError('Failed to sign in with Google.');
       console.error(err);
@@ -113,22 +128,36 @@ const SignupPage = ({ theme, toggleTheme }) => {
           <h2 className="auth-title">Create Account</h2>
           <p className="auth-subtitle text-sub">Start your community savings journey today.</p>
 
-          {error && <div className="error-message" style={{ color: 'red', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
-          
-          <div className="auth-toggle">
-            <button 
-              onClick={() => { setUsePhone(false); setError(''); }} 
-              className={`btn-toggle ${!usePhone ? 'active' : ''}`}
-            >
-              Email
-            </button>
-            <button 
-              onClick={() => { setUsePhone(true); setError(''); }} 
-              className={`btn-toggle ${usePhone ? 'active' : ''}`}
-            >
-              Phone
-            </button>
-          </div>
+          {currentUser && userData ? (
+            <div style={{ textAlign: 'center', margin: '2rem 0' }}>
+              <CheckCircle size={48} color="var(--primary-green)" style={{ margin: '0 auto 1rem' }} />
+              <h3>You are already logged in!</h3>
+              <p className="text-sub" style={{ marginBottom: '1.5rem' }}>You are currently signed in as <strong>{userData.role}</strong>.</p>
+              <button onClick={() => navigate(getRoleRedirect(userData.role))} className="btn-primary" style={{ width: '100%', marginBottom: '10px' }}>
+                Go to Dashboard
+              </button>
+              <button onClick={() => { auth.signOut(); window.location.reload(); }} className="btn-secondary" style={{ width: '100%' }}>
+                Log Out
+              </button>
+            </div>
+          ) : (
+            <>
+              {error && <div className="error-message" style={{ color: 'red', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
+              
+              <div className="auth-toggle">
+                <button 
+                  onClick={() => { setUsePhone(false); setError(''); }} 
+                  className={`btn-toggle ${!usePhone ? 'active' : ''}`}
+                >
+                  Email
+                </button>
+                <button 
+                  onClick={() => { setUsePhone(true); setError(''); }} 
+                  className={`btn-toggle ${usePhone ? 'active' : ''}`}
+                >
+                  Phone
+                </button>
+              </div>
 
           <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
             <button 
@@ -351,6 +380,7 @@ const SignupPage = ({ theme, toggleTheme }) => {
           <p className="auth-footer text-sub">
             Already have an account? <span onClick={() => navigate('/login')}>Sign In</span>
           </p>
+          </>)}
         </div>
       </div>
     </div>

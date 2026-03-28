@@ -16,16 +16,28 @@ const LoginPage = ({ theme, toggleTheme }) => {
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, googleSignIn, setupRecaptcha, phoneSignIn } = useAuth();
+  const { login, googleSignIn, setupRecaptcha, phoneSignIn, userData } = useAuth();
   const navigate = useNavigate();
+
+  const getRoleRedirect = (role) => {
+    if (role === 'super-admin') return '/super-admin';
+    if (role === 'bank-admin') return '/bank-dashboard';
+    if (role === 'admin') return '/admin/communities';
+    return '/dashboard';
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
     try {
       setError('');
       setLoading(true);
-      await login(email, password);
-      navigate('/dashboard');
+      const result = await login(email, password);
+      // Fetch user doc to determine role for redirect
+      const { getDoc, doc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const snap = await getDoc(doc(db, 'users', result.user.uid));
+      const role = snap.exists() ? snap.data().role : 'user';
+      navigate(getRoleRedirect(role));
     } catch (err) {
       setError('Failed to log in. Please check your credentials.');
       console.error(err);
@@ -37,8 +49,12 @@ const LoginPage = ({ theme, toggleTheme }) => {
     try {
       setError('');
       setLoading(true);
-      await googleSignIn();
-      navigate('/dashboard');
+      const result = await googleSignIn();
+      const { getDoc, doc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const snap = await getDoc(doc(db, 'users', result.user.uid));
+      const role = snap.exists() ? snap.data().role : 'user';
+      navigate(getRoleRedirect(role));
     } catch (err) {
       setError('Failed to sign in with Google.');
       console.error(err);
@@ -66,8 +82,12 @@ const LoginPage = ({ theme, toggleTheme }) => {
     try {
       setError('');
       setLoading(true);
-      await confirmationResult.confirm(verificationCode);
-      navigate('/dashboard');
+      const result = await confirmationResult.confirm(verificationCode);
+      const { getDoc, doc } = await import('firebase/firestore');
+      const { db } = await import('../config/firebase');
+      const snap = await getDoc(doc(db, 'users', result.user.uid));
+      const role = snap.exists() ? snap.data().role : 'user';
+      navigate(getRoleRedirect(role));
     } catch (err) {
       setError('Invalid verification code.');
       console.error(err);

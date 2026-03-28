@@ -5,6 +5,7 @@ import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import MainLayout from './MainLayout';
+import './SettingsPage.css';
 
 const SettingsPage = ({ theme, toggleTheme }) => {
   const { currentUser, getUserDisplayName } = useAuth();
@@ -29,17 +30,17 @@ const SettingsPage = ({ theme, toggleTheme }) => {
 
   return (
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
-      <main className="container" style={{ paddingTop: '1rem', paddingBottom: '6rem' }}>
-        <h1 style={{ marginBottom: '2rem' }}>Settings</h1>
+      <main className="container settings-main">
+        <h1 className="settings-heading">Settings</h1>
 
         <div className="grid gap-2 settings-grid">
-          <aside className="glass card" style={{ height: 'fit-content', padding: '1.5rem' }}>
-            <div className="flex-center" style={{ flexDirection: 'column', paddingBottom: '2rem', borderBottom: '1px solid var(--glass-border)', marginBottom: '1.5rem' }}>
-              <div className="avatar" style={{ width: '80px', height: '80px', fontSize: '2rem', marginBottom: '1rem' }}>
+          <aside className="glass card settings-aside-card">
+            <div className="flex-center settings-avatar-container">
+              <div className="avatar settings-avatar">
                 {getUserDisplayName().substring(0, 2).toUpperCase()}
               </div>
-              <h3 style={{ margin: 0 }}>{getUserDisplayName()}</h3>
-              <p className="text-sub" style={{ fontSize: '0.9rem' }}>{currentUser?.email}</p>
+              <h3 className="settings-username">{getUserDisplayName()}</h3>
+              <p className="text-sub settings-email">{currentUser?.email}</p>
             </div>
 
             <nav className="sidebar-nav">
@@ -58,18 +59,17 @@ const SettingsPage = ({ theme, toggleTheme }) => {
             </nav>
           </aside>
 
-          <div className="glass card" style={{ padding: '3rem' }}>
-            <section style={{ marginBottom: '3rem' }}>
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Appearance</h2>
-              <div className="flex-between glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)' }}>
+          <div className="glass card settings-content-card">
+            <section className="settings-section">
+              <h2 className="settings-section-title">Appearance</h2>
+              <div className="flex-between glass settings-theme-box">
                 <div>
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>Theme Mode</h3>
-                  <p className="text-sub" style={{ fontSize: '0.9rem' }}>Customize how NjangiPay looks on your device.</p>
+                  <h3 className="settings-theme-title">Theme Mode</h3>
+                  <p className="text-sub settings-theme-desc">Customize how NjangiPay looks on your device.</p>
                 </div>
                 <button 
                   onClick={toggleTheme} 
-                  className="btn-secondary flex gap-1"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 1.2rem' }}
+                  className="btn-secondary settings-theme-btn"
                 >
                   {theme === 'light' ? (
                     <><Moon size={20} /> Dark Mode</>
@@ -81,35 +81,33 @@ const SettingsPage = ({ theme, toggleTheme }) => {
             </section>
 
             <form onSubmit={handleUpdateProfile}>
-              <section style={{ marginBottom: '3rem' }}>
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Profile Information</h2>
+              <section className="settings-section">
+                <h2 className="settings-section-title">Profile Information</h2>
                 <div className="grid gap-1 grid-2">
                   <div className="form-group">
-                    <label className="form-label" htmlFor="displayName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Display Name</label>
+                    <label className="form-label settings-input-label" htmlFor="displayName">Display Name</label>
                     <input 
                       type="text" 
                       id="displayName"
                       name="displayName"
-                      className="auth-input" 
+                      className="auth-input settings-input settings-input-active" 
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      style={{ width: '100%', background: 'var(--off-white)', border: '1px solid var(--glass-border)' }}
                     />
                   </div>
                   <div className="form-group">
-                     <label className="form-label" htmlFor="emailAddress" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Email Address</label>
+                     <label className="form-label settings-input-label" htmlFor="emailAddress">Email Address</label>
                      <input 
                        type="email" 
                        id="emailAddress"
                        name="emailAddress"
-                       className="auth-input" 
+                       className="auth-input settings-input settings-input-disabled" 
                        defaultValue={currentUser?.email || ''} 
                        disabled
-                       style={{ width: '100%', background: 'var(--accent-light)', border: '1px solid var(--glass-border)', cursor: 'not-allowed' }}
                      />
                   </div>
                 </div>
-                <button type="submit" className="btn-primary" style={{ marginTop: '2rem' }} disabled={updating}>
+                <button type="submit" className="btn-primary settings-submit-btn" disabled={updating}>
                   {updating ? "Saving..." : <><Save size={18} /> Update Profile</>}
                 </button>
               </section>

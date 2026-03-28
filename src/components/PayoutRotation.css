@@ -1,0 +1,125 @@
+/* PayoutRotation.css */
+
+.payout-grid {
+  margin-bottom: 2rem;
+}
+
+.payout-cycle-card {
+  display: flex;
+  justify-content: space-between;
+}
+
+.payout-card-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.payout-card-value {
+  margin: 0.25rem 0;
+}
+
+.rotation-container {
+  padding: 0;
+  overflow: hidden;
+}
+
+.rotation-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(46, 204, 113, 0.05);
+}
+
+.rotation-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rotation-item {
+  padding: 20px;
+  border-bottom: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
+}
+
+.rotation-item.current-turn {
+  background: rgba(52, 152, 219, 0.05);
+}
+
+.rotation-item.current-turn:hover {
+  background: rgba(52, 152, 219, 0.1);
+}
+
+.rotation-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.rotation-avatar.paid {
+  background: var(--primary-light);
+  color: var(--primary-green);
+}
+
+.rotation-avatar.pending {
+  background: var(--off-white);
+  color: var(--text-color);
+}
+
+.rotation-name {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.badge-current {
+  margin-left: 10px;
+  background: #3498db;
+  color: white;
+}
+
+.rotation-details {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+}
+
+.rotation-amount-wrapper {
+  text-align: right;
+  margin-right: 20px;
+}
+
+.rotation-amount {
+  margin: 0;
+  font-weight: bold;
+}
+
+.rotation-status {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.rotation-status.paid {
+  color: var(--primary-green);
+}
+
+.rotation-status.pending {
+  color: var(--text-muted);
+}
+
+.btn-approve-arrow {
+  margin-left: 5px;
+}
+
+.btn-settled {
+  opacity: 0.7;
+  border: none;
+  background: var(--primary-light);
+  color: var(--primary-green);
+}
+
+.btn-locked {
+  opacity: 0.5;
+}

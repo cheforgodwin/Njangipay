@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { processTransfer } from '../utils/transactionHelpers';
 import MainLayout from './MainLayout';
 import './Dashboard.css';
+import './WalletPage.css';
 
 const WalletPage = ({ theme, toggleTheme }) => {
   const { currentUser } = useAuth();
@@ -163,12 +164,12 @@ const WalletPage = ({ theme, toggleTheme }) => {
   return (
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
       <header className="dashboard-header">
-        <div className="flex gap-1" style={{ alignItems: 'center' }}>
+        <div className="flex gap-1 wallet-header-left">
           <h1>My Wallet</h1>
         </div>
         <div className="flex gap-1">
             <button className="btn-secondary" onClick={() => window.print()}><Download size={18} /> Export CSV</button>
-            <button className="btn-secondary" onClick={() => setShowWithdrawModal(true)} style={{ background: '#fdedec', color: '#e74c3c' }}><ArrowUpRight size={18} /> Withdraw</button>
+            <button className="btn-secondary wallet-btn-withdraw" onClick={() => setShowWithdrawModal(true)}><ArrowUpRight size={18} /> Withdraw</button>
             <button className="btn-primary" onClick={() => setShowDepositModal(true)}><Plus size={18} /> Add Funds</button>
         </div>
       </header>
@@ -177,21 +178,21 @@ const WalletPage = ({ theme, toggleTheme }) => {
         <div className="modal-overlay">
           <div className="glass modal-content">
             <h2>Add Funds</h2>
-            <form onSubmit={handleDeposit} style={{ marginTop: '20px' }}>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px' }}>Amount to Deposit (XAF)</label>
+            <form onSubmit={handleDeposit} className="wallet-modal-form">
+              <div className="wallet-modal-group">
+                <label className="wallet-modal-label">Amount to Deposit (XAF)</label>
                 <input 
                   type="number" 
                   value={amount} 
                   onChange={(e) => setAmount(e.target.value)}
                   required 
                   placeholder="25,000"
-                  style={{ width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', fontSize: '1.1rem' }}
+                  className="wallet-modal-input"
                 />
               </div>
               <div className="flex gap-1">
-                <button type="button" onClick={() => setShowDepositModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Confirm Deposit</button>
+                <button type="button" onClick={() => setShowDepositModal(false)} className="btn-secondary wallet-modal-btn">Cancel</button>
+                <button type="submit" className="btn-primary wallet-modal-btn">Confirm Deposit</button>
               </div>
             </form>
           </div>
@@ -202,31 +203,31 @@ const WalletPage = ({ theme, toggleTheme }) => {
         <div className="modal-overlay">
           <div className="glass modal-content">
             <h2>Transfer Funds</h2>
-            <form onSubmit={handleTransfer} style={{ marginTop: '20px' }}>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px' }}>Recipient Account ID</label>
+            <form onSubmit={handleTransfer} className="wallet-modal-form">
+              <div className="wallet-modal-group">
+                <label className="wallet-modal-label">Recipient Account ID</label>
                 <input 
                   type="text" 
                   value={recipientId} 
                   onChange={(e) => setRecipientId(e.target.value.toUpperCase())}
                   required 
                   placeholder="NP-XXXXXXXX"
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  className="wallet-modal-input-sm"
                 />
               </div>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px' }}>Amount (XAF)</label>
+              <div className="wallet-modal-group">
+                <label className="wallet-modal-label">Amount (XAF)</label>
                 <input 
                   type="number" 
                   value={amount} 
                   onChange={(e) => setAmount(e.target.value)}
                   required 
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  className="wallet-modal-input-sm"
                 />
               </div>
               <div className="flex gap-1">
-                <button type="button" onClick={() => setShowTransferModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Send XAF</button>
+                <button type="button" onClick={() => setShowTransferModal(false)} className="btn-secondary wallet-modal-btn">Cancel</button>
+                <button type="submit" className="btn-primary wallet-modal-btn">Send XAF</button>
               </div>
             </form>
           </div>
@@ -237,13 +238,13 @@ const WalletPage = ({ theme, toggleTheme }) => {
         <div className="modal-overlay">
           <div className="glass modal-content">
             <h2>Withdraw to Bank</h2>
-            <form onSubmit={handleWithdraw} style={{ marginTop: '20px' }}>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px' }}>Select Partner Bank</label>
+            <form onSubmit={handleWithdraw} className="wallet-modal-form">
+              <div className="wallet-modal-group">
+                <label className="wallet-modal-label">Select Partner Bank</label>
                 <select 
                   value={recipientBank}
                   onChange={(e) => setRecipientBank(e.target.value)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  className="wallet-modal-input-sm"
                 >
                   <option>Ecobank</option>
                   <option>SCB Cameroon</option>
@@ -251,19 +252,19 @@ const WalletPage = ({ theme, toggleTheme }) => {
                   <option>Afriland First Bank</option>
                 </select>
               </div>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px' }}>Amount to Withdraw (XAF)</label>
+              <div className="wallet-modal-group">
+                <label className="wallet-modal-label">Amount to Withdraw (XAF)</label>
                 <input 
                   type="number" 
                   value={amount} 
                   onChange={(e) => setAmount(e.target.value)}
                   required 
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }}
+                  className="wallet-modal-input-sm"
                 />
               </div>
               <div className="flex gap-1">
-                <button type="button" onClick={() => setShowWithdrawModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" className="btn-primary" style={{ flex: 1, background: '#e74c3c', border: 'none' }}>Confirm Withdrawal</button>
+                <button type="button" onClick={() => setShowWithdrawModal(false)} className="btn-secondary wallet-modal-btn">Cancel</button>
+                <button type="submit" className="btn-primary wallet-modal-btn wallet-modal-btn-danger">Confirm Withdrawal</button>
               </div>
             </form>
           </div>
@@ -272,77 +273,77 @@ const WalletPage = ({ theme, toggleTheme }) => {
 
       <div className="dashboard-grid wallet-grid">
         <div>
-          <div className="glass card wallet-card-primary" style={{ padding: '40px', borderRadius: '30px' }}>
-            <div className="flex-between" style={{ opacity: 0.8, marginBottom: '10px' }}>
+          <div className="glass card wallet-card-primary wallet-card-primary-wrapper">
+            <div className="flex-between wallet-balance-header">
                <span>Wallet Balance</span>
                <CreditCard size={20} />
             </div>
-            <h2 className="hero-title" style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', margin: '0 0 40px 0', color: '#fff' }}>
+            <h2 className="hero-title wallet-balance-amount">
               {balance.toLocaleString()} XAF
             </h2>
             
-            <div className="flex gap-1" style={{ flexWrap: 'wrap' }}>
-               <button className="btn-primary" style={{ flex: '1 1 120px', background: 'rgba(255,255,255,0.2)' }} onClick={() => setShowDepositModal(true)}>
+            <div className="flex gap-1 wallet-actions-container">
+               <button className="btn-primary wallet-action-btn wallet-action-deposit" onClick={() => setShowDepositModal(true)}>
                   <Download size={18} /> Deposit
                </button>
-               <button className="btn-primary" style={{ flex: '1 1 120px', background: 'white', color: 'var(--primary-green)' }} onClick={() => setShowTransferModal(true)}>
+               <button className="btn-primary wallet-action-btn wallet-action-transfer" onClick={() => setShowTransferModal(true)}>
                   <ArrowUpRight size={18} /> Transfer
                </button>
             </div>
           </div>
 
-          <div className="glass card" style={{ marginTop: '30px' }}>
-             <h3 style={{ margin: '0 0 20px 0' }}>Wallet Info</h3>
-             <div className="flex" style={{ flexDirection: 'column', gap: '15px' }}>
+          <div className="glass card wallet-info-card">
+             <h3 className="wallet-info-title">Wallet Info</h3>
+             <div className="flex wallet-info-list">
                 <div className="flex-between">
                    <span className="text-muted">Account ID</span>
-                   <span style={{ fontWeight: '600' }}>NP-{currentUser?.uid ? currentUser.uid.substring(0,8).toUpperCase() : 'GUEST'}</span>
+                   <span className="wallet-info-val-bold">NP-{currentUser?.uid ? currentUser.uid.substring(0,8).toUpperCase() : 'GUEST'}</span>
                 </div>
                 <div className="flex-between">
                    <span className="text-muted">Status</span>
-                   <span style={{ color: '#27ae60', fontWeight: '700' }}>Verified</span>
+                   <span className="wallet-info-val-success">Verified</span>
                 </div>
                 <div className="flex-between">
                    <span className="text-muted">Currency</span>
-                   <span style={{ fontWeight: '600' }}>XAF (CFA Franc)</span>
+                   <span className="wallet-info-val-bold">XAF (CFA Franc)</span>
                 </div>
              </div>
           </div>
         </div>
 
-        <div className="glass card" style={{ padding: '0', overflow: 'hidden' }}>
-           <div className="flex-between" style={{ padding: '30px', borderBottom: '1px solid #f0f0f0' }}>
-             <h3 style={{ margin: 0 }}>Transaction History</h3>
+        <div className="glass card wallet-history-card">
+           <div className="flex-between wallet-history-header">
+             <h3 className="wallet-history-title">Transaction History</h3>
              <button className="btn-secondary">Full History</button>
            </div>
            
-           <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
+           <div className="wallet-history-list">
               {loading ? (
-                 <div className="flex-center" style={{ height: '200px' }}>Loading transactions...</div>
+                 <div className="flex-center wallet-history-loading">Loading transactions...</div>
               ) : transactions.length > 0 ? (
                 transactions.map((txn) => (
-                  <div key={txn.id} className="flex-between" style={{ padding: '25px 30px', borderBottom: '1px solid #f9f9f9' }}>
-                    <div className="flex gap-1" style={{ alignItems: 'center' }}>
-                      <div style={{ width: '50px', height: '50px', borderRadius: '15px', background: txn.type === 'deposit' ? '#e8f8f5' : '#fdedec', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div key={txn.id} className="flex-between wallet-txn-item">
+                    <div className="flex gap-1 wallet-txn-left">
+                      <div className={`wallet-txn-icon-box ${txn.type === 'deposit' ? 'wallet-txn-deposit-bg' : 'wallet-txn-expense-bg'}`}>
                          {txn.type === 'deposit' ? <ArrowDownLeft color="#27ae60" size={24} /> : <ArrowUpRight color="#e74c3c" size={24} />}
                       </div>
                       <div>
-                        <p style={{ fontWeight: '700', margin: 0, fontSize: '1.1rem' }}>{txn.title || (txn.type === 'deposit' ? 'Deposit' : 'Expense')}</p>
-                        <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '5px' }}>
+                        <p className="wallet-txn-title">{txn.title || (txn.type === 'deposit' ? 'Deposit' : 'Expense')}</p>
+                        <p className="text-muted wallet-txn-time">
                           {txn.timestamp?.toDate ? txn.timestamp.toDate().toLocaleString() : 'Just now'}
                         </p>
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontWeight: '800', fontSize: '1.1rem', margin: 0, color: txn.type === 'deposit' ? '#27ae60' : '#e74c3c' }}>
+                    <div className="wallet-txn-right">
+                      <p className={`wallet-txn-amount ${txn.type === 'deposit' ? 'wallet-txn-amount-pos' : 'wallet-txn-amount-neg'}`}>
                         {txn.type === 'deposit' ? '+' : '-'} {txn.amount?.toLocaleString()} XAF
                       </p>
-                      <p style={{ color: '#ccc', fontSize: '0.8rem', margin: '4px 0' }}>TXN-{txn.id.substring(0,8).toUpperCase()}</p>
+                      <p className="wallet-txn-id">TXN-{txn.id.substring(0,8).toUpperCase()}</p>
                     </div>
                   </div>
                 ))
               ) : (
-                 <div style={{ padding: '40px', textAlign: 'center' }} className="text-muted">No transactions found.</div>
+                 <div className="text-muted wallet-txn-empty">No transactions found.</div>
               )}
            </div>
         </div>
