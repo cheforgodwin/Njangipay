@@ -23,6 +23,7 @@ import { processLoanFunding, processLoanRepayment } from '../utils/transactionHe
 import MainLayout from './MainLayout';
 import { collection, query, onSnapshot, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc, increment, where, getDocs } from 'firebase/firestore';
 import './Dashboard.css';
+import logo from '../assets/logo.svg';
 
 const Marketplace = ({ theme, toggleTheme }) => {
   const navigate = useNavigate();
@@ -190,35 +191,7 @@ const Marketplace = ({ theme, toggleTheme }) => {
   });
 
   return (
-    <div className="sidebar-layout">
-      <aside className="sidebar">
-        <div className="sidebar-logo logo">🌱 NjangiPay</div>
-        <nav className="sidebar-nav">
-          <Link to="/dashboard" className={`nav-item ${isLinkActive('/dashboard') ? 'active' : ''}`}>
-            <LayoutDashboard size={20} /> Dashboard
-          </Link>
-          <Link to="/wallet" className={`nav-item ${isLinkActive('/wallet') ? 'active' : ''}`}>
-            <Wallet size={20} /> My Wallet
-          </Link>
-          <Link to="/groups" className={`nav-item ${isLinkActive('/groups') ? 'active' : ''}`}>
-            <Users size={20} /> Savings Groups
-          </Link>
-          <Link to="/marketplace" className={`nav-item ${isLinkActive('/marketplace') ? 'active' : ''}`}>
-            <Target size={20} /> Marketplace
-          </Link>
-          <Link to="/admin/communities" className={`nav-item ${isLinkActive('/admin/communities') ? 'active' : ''}`}>
-            <CreditCard size={20} /> Loans & Risk
-          </Link>
-        </nav>
-
-        <div className="sidebar-footer" style={{ padding: '20px', borderTop: '1px solid var(--glass-border)' }}>
-          <button onClick={toggleTheme} className="theme-toggle-btn" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '600' }}>
-            {theme === 'light' ? <><Moon size={20} /> Dark Mode</> : <><Sun size={20} /> Light Mode</>}
-          </button>
-        </div>
-      </aside>
-
-      <main className="dashboard-main">
+    <MainLayout theme={theme} toggleTheme={toggleTheme}>
         <header className="dashboard-header">
           <div>
             <h1>{view === 'market' ? 'Loan Marketplace' : 'My Portfolio'}</h1>
@@ -440,8 +413,7 @@ const Marketplace = ({ theme, toggleTheme }) => {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </MainLayout>
   );
 };
 

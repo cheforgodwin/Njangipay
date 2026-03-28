@@ -1,0 +1,214 @@
+/* Marketplace.css */
+
+.marketplace-loan-form {
+  margin-top: 20px;
+}
+
+.marketplace-form-group {
+  margin-bottom: 15px;
+}
+
+.marketplace-form-label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.marketplace-form-input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+}
+
+.marketplace-form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.marketplace-form-col {
+  flex: 1;
+}
+
+.marketplace-form-actions {
+  margin-top: 30px;
+}
+
+.marketplace-grid {
+  grid-template-columns: 1.8fr 1fr;
+}
+
+.marketplace-list {
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.marketplace-loading {
+  height: 200px;
+}
+
+.marketplace-item-header {
+  margin-bottom: 1.5rem;
+}
+
+.marketplace-item-left {
+  align-items: center;
+}
+
+.marketplace-item-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--primary-green);
+  color: #fff;
+  font-weight: 800;
+}
+
+.marketplace-item-user {
+  margin: 0;
+}
+
+.marketplace-item-id {
+  font-size: 0.85rem;
+}
+
+.marketplace-item-right {
+  text-align: right;
+}
+
+.marketplace-risk-label {
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.marketplace-risk-value {
+  align-items: center;
+  font-weight: 700;
+}
+
+.marketplace-risk-high {
+  color: var(--primary-green);
+}
+
+.marketplace-risk-low {
+  color: #f39c12;
+}
+
+.marketplace-item-stats {
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--accent-light);
+  border-radius: 12px;
+}
+
+.marketplace-stat-label {
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.marketplace-stat-value {
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.marketplace-stat-interest {
+  color: var(--primary-green);
+}
+
+.marketplace-stat-security {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.marketplace-item-actions {
+  margin-top: 1.5rem;
+}
+
+.marketplace-btn-repay {
+  background: var(--primary-dark);
+}
+
+.marketplace-badge-status {
+  flex: 1;
+  justify-content: center;
+  height: auto;
+  padding: 10px;
+}
+
+.marketplace-empty {
+  padding: 3rem;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: center;
+}
+
+.marketplace-sidebar {
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.marketplace-smart-card {
+  border: 1px solid var(--primary-green);
+}
+
+.marketplace-smart-title {
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.marketplace-smart-desc {
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.marketplace-smart-highlight {
+  color: var(--primary-green);
+  font-weight: 700;
+}
+
+.marketplace-smart-info {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--accent-light);
+  border-radius: 12px;
+}
+
+.marketplace-smart-text {
+  font-size: 0.85rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.marketplace-portfolio-card {
+  margin-bottom: 1.5rem;
+}
+
+.marketplace-portfolio-list {
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.marketplace-portfolio-label {
+  font-size: 0.9rem;
+}
+
+.marketplace-portfolio-val {
+  font-weight: 700;
+}
+
+.marketplace-portfolio-val-pos {
+  color: var(--primary-green);
+}
+
+.marketplace-portfolio-next {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.marketplace-portfolio-btn {
+  width: 100%;
+  margin-top: 2rem;
+  padding: 0.8rem;
+}

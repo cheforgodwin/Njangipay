@@ -22,6 +22,7 @@ import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from './MainLayout';
 import './Dashboard.css';
+import './InvestorAnalytics.css';
 
 const InvestorAnalytics = ({ theme, toggleTheme }) => {
   const navigate = useNavigate();
@@ -89,67 +90,67 @@ const InvestorAnalytics = ({ theme, toggleTheme }) => {
         </button>
         </header>
 
-        <div className="grid grid-4" style={{ marginBottom: '2rem', gap: '1rem' }}>
+        <div className="grid grid-4 investor-stats-grid">
           {portfolioStats.map((stat, i) => (
             <div key={i} className="glass card">
-              <div className="stat-icon" style={{ background: `${stat.color}20`, color: stat.color, marginBottom: '1.5rem' }}>
+              <div className="stat-icon investor-stat-icon" style={{ background: `${stat.color}20`, color: stat.color }}>
                 {stat.icon}
               </div>
-              <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '0.25rem' }}>{stat.label}</p>
-              <h2 style={{ fontSize: 'clamp(1.2rem, 5vw, 1.8rem)', margin: 0 }}>{stat.value}</h2>
+              <p className="text-muted investor-stat-label">{stat.label}</p>
+              <h2 className="investor-stat-value">{stat.value}</h2>
             </div>
           ))}
         </div>
 
         <div className="activity-grid">
           <div className="glass card">
-             <div className="flex-between" style={{ marginBottom: '2rem' }}>
-                <h3 style={{ margin: 0 }}>Capital Allocation by Risk</h3>
-                <span className="text-muted" style={{ fontSize: '0.9rem' }}>Updated 1h ago</span>
+             <div className="flex-between investor-section-header">
+                <h3 className="investor-section-title">Capital Allocation by Risk</h3>
+                <span className="text-muted investor-section-time">Updated 1h ago</span>
              </div>
              
-             <div className="flex" style={{ flexDirection: 'column', gap: '1.5rem' }}>
+             <div className="flex investor-allocation-list">
                 {[
                   { label: 'Low Risk (Score > 0.8)', allocation: 65, color: 'var(--primary-green)' },
                   { label: 'Medium Risk (Score 0.4-0.8)', allocation: 25, color: '#f1c40f' },
                   { label: 'High Yield (Score < 0.4)', allocation: 10, color: '#e74c3c' },
                 ].map((risk, i) => (
                   <div key={i}>
-                    <div className="flex-between" style={{ marginBottom: '8px', fontSize: '0.9rem' }}>
-                      <span style={{ fontWeight: '600' }}>{risk.label}</span>
-                      <span style={{ fontWeight: '800' }}>{risk.allocation}%</span>
+                    <div className="flex-between investor-allocation-row">
+                      <span className="investor-allocation-label">{risk.label}</span>
+                      <span className="investor-allocation-pct">{risk.allocation}%</span>
                     </div>
-                    <div className="progress-bar-bg" style={{ height: '8px' }}>
-                      <div className="progress-bar-fill" style={{ width: `${risk.allocation}%`, background: risk.color, height: '100%' }}></div>
+                    <div className="progress-bar-bg investor-progress-bg">
+                      <div className="progress-bar-fill investor-progress-fill" style={{ width: `${risk.allocation}%`, background: risk.color }}></div>
                     </div>
                   </div>
                 ))}
              </div>
 
-             <div className="flex-between" style={{ marginTop: '3rem', marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: 0 }}>Cluster Performance</h3>
+             <div className="flex-between investor-cluster-header">
+                <h3 className="investor-section-title">Cluster Performance</h3>
              </div>
-             <div className="grid grid-2" style={{ gap: '1rem' }}>
-                <div style={{ padding: '15px', background: 'var(--off-white)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                   <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '5px' }}>Top Branch</p>
-                   <p style={{ fontWeight: '700', margin: 0 }}>Yaoundé - Central</p>
-                   <p style={{ color: 'var(--primary-green)', fontSize: '0.8rem' }}>+12.4% MoM</p>
+             <div className="grid grid-2 investor-cluster-grid">
+                <div className="investor-cluster-card">
+                   <p className="text-muted investor-cluster-label">Top Branch</p>
+                   <p className="investor-cluster-name">Yaoundé - Central</p>
+                   <p className="investor-cluster-growth">+12.4% MoM</p>
                 </div>
-                <div style={{ padding: '15px', background: 'var(--off-white)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                   <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '5px' }}>Emerging Hub</p>
-                   <p style={{ fontWeight: '700', margin: 0 }}>Douala North</p>
-                   <p style={{ color: 'var(--primary-green)', fontSize: '0.8rem' }}>+8.2% MoM</p>
+                <div className="investor-cluster-card">
+                   <p className="text-muted investor-cluster-label">Emerging Hub</p>
+                   <p className="investor-cluster-name">Douala North</p>
+                   <p className="investor-cluster-growth">+8.2% MoM</p>
                 </div>
              </div>
           </div>
 
-          <div className="glass card" style={{ padding: '0', overflow: 'hidden' }}>
-             <div style={{ padding: '25px', borderBottom: '1px solid var(--glass-border)' }}>
-                <h3 style={{ margin: 0 }}>Monthly Performance</h3>
+          <div className="glass card investor-yield-card">
+             <div className="investor-yield-header">
+                <h3 className="investor-section-title">Monthly Performance</h3>
              </div>
              <div>
                 {loading ? (
-                   <div className="flex-center" style={{ height: '200px' }}>Analyzing yield curves...</div>
+                   <div className="flex-center investor-loading">Analyzing yield curves...</div>
                 ) : (
                   [
                     { month: 'September', returns: '+1.2M', growth: 'up' },
@@ -158,17 +159,17 @@ const InvestorAnalytics = ({ theme, toggleTheme }) => {
                     { month: 'June', returns: '+850K', growth: 'up' },
                     { month: 'May', returns: '+720K', growth: 'up' },
                   ].map((row, i) => (
-                    <div key={i} className="flex-between" style={{ padding: '20px 25px', borderBottom: '1px solid var(--glass-border)' }}>
-                       <span style={{ fontWeight: '600' }}>{row.month}</span>
-                       <div className="flex gap-1" style={{ alignItems: 'center' }}>
-                          <span style={{ fontWeight: '800', color: row.growth === 'up' ? 'var(--primary-green)' : '#e74c3c' }}>{row.returns}</span>
+                    <div key={i} className="flex-between investor-yield-row">
+                       <span className="investor-yield-month">{row.month}</span>
+                       <div className="flex gap-1 investor-yield-data">
+                          <span className="investor-yield-val" style={{ color: row.growth === 'up' ? 'var(--primary-green)' : '#e74c3c' }}>{row.returns}</span>
                           {row.growth === 'up' ? <ArrowUpRight size={14} color="#27ae60" /> : <ArrowDownRight size={14} color="#e74c3c" />}
                        </div>
                     </div>
                   ))
                 )}
              </div>
-             <button className="btn-secondary" style={{ width: 'calc(100% - 50px)', margin: '20px 25px' }}>Detailed Yield Report</button>
+             <button className="btn-secondary investor-yield-btn">Detailed Yield Report</button>
           </div>
         </div>
     </MainLayout>

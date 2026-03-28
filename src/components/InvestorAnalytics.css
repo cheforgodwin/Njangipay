@@ -1,0 +1,124 @@
+/* InvestorAnalytics.css */
+.investor-stats-grid {
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.investor-stat-icon {
+  margin-bottom: 1.5rem;
+}
+
+.investor-stat-label {
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.investor-stat-value {
+  font-size: clamp(1.2rem, 5vw, 1.8rem);
+  margin: 0;
+}
+
+.investor-section-header {
+  margin-bottom: 2rem;
+}
+
+.investor-section-title {
+  margin: 0;
+}
+
+.investor-section-time {
+  font-size: 0.9rem;
+}
+
+.investor-allocation-list {
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.investor-allocation-row {
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.investor-allocation-label {
+  font-weight: 600;
+}
+
+.investor-allocation-pct {
+  font-weight: 800;
+}
+
+.investor-progress-bg {
+  height: 8px;
+}
+
+.investor-progress-fill {
+  height: 100%;
+}
+
+.investor-cluster-header {
+  margin-top: 3rem;
+  margin-bottom: 1.5rem;
+}
+
+.investor-cluster-grid {
+  gap: 1rem;
+}
+
+.investor-cluster-card {
+  padding: 15px;
+  background: var(--off-white);
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+}
+
+.investor-cluster-label {
+  font-size: 0.75rem;
+  margin-bottom: 5px;
+}
+
+.investor-cluster-name {
+  font-weight: 700;
+  margin: 0;
+}
+
+.investor-cluster-growth {
+  color: var(--primary-green);
+  font-size: 0.8rem;
+}
+
+.investor-yield-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.investor-yield-header {
+  padding: 25px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.investor-loading {
+  height: 200px;
+}
+
+.investor-yield-row {
+  padding: 20px 25px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.investor-yield-month {
+  font-weight: 600;
+}
+
+.investor-yield-data {
+  align-items: center;
+}
+
+.investor-yield-val {
+  font-weight: 800;
+}
+
+.investor-yield-btn {
+  width: calc(100% - 50px);
+  margin: 20px 25px;
+}

@@ -7,6 +7,7 @@ import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, updateDoc 
 import { db } from '../config/firebase';
 import MainLayout from './MainLayout';
 import './Dashboard.css';
+import './AdminPanel.css';
 
 const AdminPanel = ({ theme, toggleTheme }) => {
   const location = useLocation();
@@ -104,50 +105,49 @@ const AdminPanel = ({ theme, toggleTheme }) => {
 
       <div className="grid grid-3">
         {loading ? (
-             <div className="flex-center" style={{ gridColumn: '1/-1', height: '300px' }}>Loading clusters...</div>
+             <div className="flex-center admin-loading">Loading clusters...</div>
         ) : communities.map((community) => (
-          <div key={community.id} className="glass card flex" style={{ flexDirection: 'column', gap: '1rem' }}>
+          <div key={community.id} className="glass card flex admin-card">
             <div className="flex-between">
-              <div className="stat-icon" style={{ margin: 0 }}>
+              <div className="stat-icon admin-icon">
                 {community.type === 'global' ? <Globe color="var(--primary-green)" size={24} /> : <MapPin color="var(--primary-green)" size={24} />}
               </div>
               <span className="status-pill status-paid">{community.status || 'Active'}</span>
             </div>
             
             <div>
-              <h3 style={{ marginBottom: '0.25rem' }}>{community.name}</h3>
-              <p className="text-sub" style={{ fontSize: '0.85rem' }}>{community.description}</p>
+              <h3 className="admin-title">{community.name}</h3>
+              <p className="text-sub admin-desc">{community.description}</p>
             </div>
 
-            <div style={{ padding: '1rem', background: 'var(--accent-light)', borderRadius: '12px' }}>
-               <p style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px' }}>Active Groups</p>
-               <div className="flex-column" style={{ gap: '8px' }}>
+            <div className="admin-groups-container">
+               <p className="admin-groups-title">Active Groups</p>
+               <div className="flex-column admin-groups-list">
                   {subGroups.filter(g => g.type === 'public' || community.type === 'global').slice(0, 3).map(group => (
-                    <div key={group.id} className="flex-between" style={{ fontSize: '0.85rem' }}>
+                    <div key={group.id} className="flex-between admin-group-item">
                        <span>{group.name}</span>
-                       <span style={{ fontWeight: 600 }}>{group.members || 0} mem.</span>
+                       <span className="admin-group-mem">{group.members || 0} mem.</span>
                     </div>
                   ))}
-                  {subGroups.length === 0 && <span className="text-muted" style={{ fontSize: '0.8rem' }}>No groups linked yet.</span>}
+                  {subGroups.length === 0 && <span className="text-muted admin-no-groups">No groups linked yet.</span>}
                </div>
             </div>
 
-            <div className="flex-between" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 'auto' }}>
+            <div className="flex-between admin-card-footer">
                <div className="flex gap-1"><Users size={16} /> {community.members?.toLocaleString() || 0} Total</div>
-               <button className="btn-secondary" style={{ padding: '5px 15px' }} onClick={() => handleManage(community)}>Manage</button>
+               <button className="btn-secondary admin-btn-manage" onClick={() => handleManage(community)}>Manage</button>
             </div>
           </div>
         ))}
         
         <div 
-          className="glass card flex-center" 
-          style={{ border: '2px dashed var(--glass-border)', background: 'transparent', cursor: 'pointer', flexDirection: 'column', gap: '1rem' }}
+          className="glass card flex-center admin-add-card" 
           onClick={handleAddBranch}
         >
-           <div className="flex-center" style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'var(--accent-light)' }}>
+           <div className="flex-center admin-add-icon-box">
               <Plus color="var(--primary-green)" />
            </div>
-           <span className="text-muted" style={{ fontWeight: '600' }}>Add New Branch</span>
+           <span className="text-muted admin-add-text">Add New Branch</span>
         </div>
       </div>
     </MainLayout>
@@ -155,27 +155,27 @@ const AdminPanel = ({ theme, toggleTheme }) => {
     {selectedCommunity && (
       <div className="modal-overlay">
         <div className="glass modal-content">
-          <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+          <div className="flex-between admin-modal-header">
             <h2>Manage: {selectedCommunity.name}</h2>
-            <button onClick={() => setSelectedCommunity(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+            <button onClick={() => setSelectedCommunity(null)} className="admin-modal-close"><X size={24} /></button>
           </div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Branch Description</label>
+          <label className="admin-modal-label">Branch Description</label>
           <textarea 
             value={editDesc}
             onChange={e => setEditDesc(e.target.value)}
             rows={4}
-            style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--glass-border)', resize: 'vertical' }}
+            className="admin-modal-textarea"
           />
-          <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--accent-light)', borderRadius: '10px' }}>
-            <p style={{ margin: 0, fontSize: '0.85rem' }}>
+          <div className="admin-modal-info">
+            <p className="admin-modal-info-text">
               <strong>Members:</strong> {selectedCommunity.members || 0} &nbsp;|&nbsp;
               <strong>Status:</strong> {selectedCommunity.status || 'Active'} &nbsp;|&nbsp;
               <strong>Type:</strong> {selectedCommunity.type || 'local'}
             </p>
           </div>
-          <div className="flex gap-1" style={{ marginTop: '1.5rem' }}>
-            <button onClick={() => setSelectedCommunity(null)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
-            <button onClick={handleSaveManage} className="btn-primary" style={{ flex: 1 }}>Save Changes</button>
+          <div className="flex gap-1 admin-modal-actions">
+            <button onClick={() => setSelectedCommunity(null)} className="btn-secondary admin-modal-btn">Cancel</button>
+            <button onClick={handleSaveManage} className="btn-primary admin-modal-btn">Save Changes</button>
           </div>
         </div>
       </div>

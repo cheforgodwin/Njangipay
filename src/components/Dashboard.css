@@ -475,3 +475,90 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* ═══════════════════════════════════════════
+   COLLAPSIBLE SIDEBAR SECTIONS
+═══════════════════════════════════════════ */
+
+.sidebar-collapsible-section {
+  margin-bottom: 0.25rem;
+}
+
+.sidebar-section-content {
+  animation: fadeSlideDown 0.18s ease;
+  overflow: hidden;
+  border-left: 2px solid var(--accent-light);
+  margin-left: 0.5rem;
+  padding-left: 0.25rem;
+}
+
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sidebar-section-label {
+  margin: 12px 0 4px;
+  padding: 4px 12px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 1.3px;
+  user-select: none;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.sidebar-section-label:hover {
+  background: var(--accent-light);
+  color: var(--primary-dark);
+}
+
+/* ═══════════════════════════════════════════
+   DARK MODE SIDEBAR Overrides
+═══════════════════════════════════════════ */
+
+[data-theme='dark'] .sidebar {
+  background: #1e293b;
+  border-right-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .nav-item:hover {
+  background: rgba(46, 204, 113, 0.1);
+  color: var(--primary-green);
+}
+
+[data-theme='dark'] .nav-item.active {
+  background: rgba(46, 204, 113, 0.15);
+  color: var(--primary-green);
+}
+
+[data-theme='dark'] .sidebar-section-content {
+  border-left-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .sidebar-section-label:hover {
+  background: rgba(46, 204, 113, 0.08);
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR SCROLLBAR POLISH
+═══════════════════════════════════════════ */
+
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 10px;
+}
+
+/* ═══════════════════════════════════════════
+   EXTRA SMALL DEVICES (wearable / 320px wide)
+═══════════════════════════════════════════ */
+
+@media (max-width: 360px) {
+  .sidebar       { width: 90%; }
+  .mobile-header { padding: 0.6rem 0.75rem; }
+  .dashboard-main { padding: 1rem 0.75rem; }
+}

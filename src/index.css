@@ -321,3 +321,14 @@ a {
     gap: 1rem;
   }
 }
+
+/* Sidebar Section Label */
+.sidebar-section-label {
+  margin: 18px 0 6px;
+  padding: 0 12px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 1.2px;
+}

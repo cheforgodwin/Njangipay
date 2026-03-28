@@ -1,0 +1,69 @@
+/* Sidebar.css */
+
+.sidebar-collapsible-section {
+  margin-bottom: 4px;
+}
+
+.sidebar-section-label {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.sidebar-section-label:hover {
+  background: rgba(46, 204, 113, 0.05); /* very subtle highlight */
+  color: var(--primary-green);
+}
+
+.sidebar-section-content {
+  display: flex;
+  flex-direction: column;
+  padding-left: 8px;
+  animation: slideDown 0.3s ease-out;
+}
+
+.sidebar {
+  overflow-y: auto;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 4px;
+}
+
+.sidebar-logo {
+  padding-bottom: 10px;
+}
+
+.sidebar-nav-container {
+  padding-bottom: 80px;
+}
+
+.nav-item-logout {
+  cursor: pointer;
+  color: #e74c3c;
+  margin-top: 10px;
+}
+.nav-item-logout:hover {
+  background: rgba(231, 76, 60, 0.1) !important;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
