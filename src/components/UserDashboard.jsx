@@ -99,7 +99,7 @@ const UserDashboard = ({ theme, toggleTheme }) => {
 
       <div className="dashboard-grid">
         <div className="glass card wallet-card-primary">
-          <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+          <div className="flex-between" style={{ marginBottom: '1.25rem' }}>
             <Wallet />
             <Plus style={{ cursor: 'pointer' }} onClick={() => navigate('/wallet')} />
           </div>
@@ -144,7 +144,7 @@ const UserDashboard = ({ theme, toggleTheme }) => {
           )}
         </div>
 
-        <div className="glass card" style={{ border: aiScore > 0.8 ? '1px solid var(--primary-green)' : '1px solid #f1c40f', display: 'flex', flexDirection: 'column' }}>
+        <div className="glass card ai-insight-card">
            <h3 style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
              <Target size={18} color={aiScore > 0.8 ? "var(--primary-green)" : "#f39c12"} /> AI Credit Insight
            </h3>
@@ -159,25 +159,45 @@ const UserDashboard = ({ theme, toggleTheme }) => {
       </div>
 
       <div className="activity-grid">
-         <div className="glass card" style={{ padding: '0' }}>
-            <div className="flex-between" style={{ padding: '2rem 2rem 1.5rem' }}>
+         <div className="glass card no-padding">
+            <div className="flex-between card-header">
                <h3 style={{ margin: 0 }}>Recent Activity</h3>
                <span className="badge" style={{ cursor: 'pointer' }} onClick={() => navigate('/wallet')}>View All</span>
             </div>
-            <div style={{ padding: '0 2rem 2rem' }}>
+            <div className="card-body">
                {recentActivity.length > 0 ? recentActivity.map((act, i) => (
                   <div key={act.id} className="flex-between" style={{ padding: '1rem 0', borderBottom: i < recentActivity.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
                      <div className="flex gap-1" style={{ alignItems: 'center' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: act.type === 'loan' ? '#fdedec' : '#e8f8f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                           {act.type === 'loan' ? <ArrowUpRight color="#e74c3c" size={18} /> : <ArrowDownLeft color="#27ae60" size={18} />}
+                        <div style={{ 
+                          width: '40px', 
+                          height: '40px', 
+                          borderRadius: '10px', 
+                          background: (act.type === 'loan' || act.type === 'withdrawal') ? '#fdedec' : '#e8f8f5', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center' 
+                        }}>
+                           {(act.type === 'loan' || act.type === 'withdrawal') ? 
+                             <ArrowUpRight color="#e74c3c" size={18} /> : 
+                             <ArrowDownLeft color="#27ae60" size={18} />
+                           }
                         </div>
                         <div>
-                           <p style={{ fontWeight: '600' }}>{act.title || (act.type === 'loan' ? 'Loan Repayment' : 'Contribution')}</p>
-                           <p className="text-muted" style={{ fontSize: '0.75rem' }}>{act.timestamp?.toDate ? act.timestamp.toDate().toLocaleDateString() : 'Recent'}</p>
+                           <p style={{ fontWeight: '600' }}>
+                             {act.title || (
+                               act.type === 'loan' ? 'Loan Issued' : 
+                               act.type === 'withdrawal' ? 'Withdrawal' :
+                               act.type === 'deposit' ? 'Deposit' :
+                               act.type === 'contribution' ? 'Contribution' : 'Transaction'
+                             )}
+                           </p>
+                           <p className="text-muted" style={{ fontSize: '0.75rem' }}>
+                             {act.timestamp?.toDate ? act.timestamp.toDate().toLocaleDateString() : 'Recent'}
+                           </p>
                         </div>
                      </div>
-                     <p style={{ fontWeight: '700', color: act.type === 'loan' ? '#e74c3c' : '#27ae60' }}>
-                       {act.type === 'loan' ? '-' : '+'} {act.amount?.toLocaleString()} XAF
+                     <p style={{ fontWeight: '700', color: (act.type === 'loan' || act.type === 'withdrawal') ? '#e74c3c' : '#27ae60' }}>
+                        {(act.type === 'loan' || act.type === 'withdrawal') ? '-' : '+'} {act.amount?.toLocaleString()} XAF
                      </p>
                   </div>
                )) : (

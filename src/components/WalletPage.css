@@ -47,7 +47,7 @@
 }
 
 .wallet-card-primary-wrapper {
-  padding: 40px;
+  /* removed hard padding, using card-header/body */
   border-radius: 30px;
 }
 
@@ -107,7 +107,6 @@
 }
 
 .wallet-history-header {
-  padding: 30px;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -125,7 +124,7 @@
 }
 
 .wallet-txn-item {
-  padding: 25px 30px;
+  padding: 1.25rem 2rem;
   border-bottom: 1px solid #f9f9f9;
 }
 

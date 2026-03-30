@@ -7,7 +7,8 @@ import {
   signInWithPopup,
   sendPasswordResetEmail,
   RecaptchaVerifier,
-  signInWithPhoneNumber
+  signInWithPhoneNumber,
+  sendEmailVerification
 } from 'firebase/auth';
 import { db, auth, googleProvider } from '../config/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -23,6 +24,14 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (email, password, phoneNumber = '', extraData = {}) => {
     const res = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Send email verification for "real email" security
+    try {
+      await sendEmailVerification(res.user);
+    } catch (e) {
+      console.warn("Could not send verification email:", e);
+    }
+
     // Initialize Firestore user doc
     await setDoc(doc(db, "users", res.user.uid), {
       uid: res.user.uid,
@@ -32,6 +41,7 @@ export const AuthProvider = ({ children }) => {
         extraData.accountType === 'community' ? 'admin' : 
         extraData.accountType === 'bank' ? 'bank-admin' : 'user'
       ),
+      emailVerified: false,
       createdAt: new Date().toISOString(),
       ...extraData
     });
@@ -59,6 +69,7 @@ export const AuthProvider = ({ children }) => {
         uid: res.user.uid,
         email: res.user.email,
         role: 'user',
+        emailVerified: true, // Google accounts are pre-verified
         createdAt: new Date().toISOString()
       });
     }

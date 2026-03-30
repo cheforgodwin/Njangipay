@@ -163,8 +163,20 @@ a {
 }
 
 .card {
-  padding: 2rem;
+  padding: 1.5rem;
   transition: all 0.3s ease;
+}
+
+.card.no-padding {
+  padding: 0;
+}
+
+.card-header {
+  padding: 1.5rem 1.5rem 1rem;
+}
+
+.card-body {
+  padding: 0 1.5rem 1.5rem;
 }
 
 .card:hover {
@@ -187,7 +199,15 @@ a {
   }
   
   .card {
-    padding: 1.5rem;
+    padding: 1.25rem 1rem;
+  }
+  
+  .card-header {
+    padding: 1.25rem 1rem 0.75rem;
+  }
+  
+  .card-body {
+    padding: 0 1rem 1.25rem;
   }
 
   .grid-2, .grid-3 { grid-template-columns: 1fr !important; }
