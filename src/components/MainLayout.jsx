@@ -14,7 +14,7 @@ const MainLayout = ({ children, theme, toggleTheme }) => {
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
-    <div className="dashboard-page-container">
+    <div className={`dashboard-page-container ${sidebarOpen ? 'sidebar-open' : ''}`}>
       <div className="mobile-header">
         <button className="menu-toggle" onClick={toggleSidebar}>
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}

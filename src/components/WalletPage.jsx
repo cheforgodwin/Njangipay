@@ -180,8 +180,8 @@ const WalletPage = ({ theme, toggleTheme }) => {
         <div className="flex gap-1 wallet-header-left">
           <h1>My Wallet</h1>
         </div>
-        <div className="flex gap-1">
-            <button className="btn-secondary" onClick={() => window.print()}><Download size={18} /> Export CSV</button>
+        <div className="flex-between-responsive header-actions">
+            <button className="btn-secondary" onClick={() => window.print()}><Download size={18} /> Export</button>
             <button className="btn-secondary wallet-btn-withdraw" onClick={() => setShowWithdrawModal(true)}><ArrowUpRight size={18} /> Withdraw</button>
             <button className="btn-primary" onClick={() => setShowDepositModal(true)}><Plus size={18} /> Add Funds</button>
         </div>
@@ -361,7 +361,7 @@ const WalletPage = ({ theme, toggleTheme }) => {
                       <div className={`wallet-txn-icon-box ${txn.type === 'deposit' ? 'wallet-txn-deposit-bg' : 'wallet-txn-expense-bg'}`}>
                          {txn.type === 'deposit' ? <ArrowDownLeft color="#27ae60" size={24} /> : <ArrowUpRight color="#e74c3c" size={24} />}
                       </div>
-                      <div>
+                      <div className="wallet-txn-details">
                         <p className="wallet-txn-title">{txn.title || (txn.type === 'deposit' ? 'Deposit' : 'Expense')}</p>
                         <p className="text-muted wallet-txn-time">
                           {txn.timestamp?.toDate ? txn.timestamp.toDate().toLocaleString() : 'Just now'}

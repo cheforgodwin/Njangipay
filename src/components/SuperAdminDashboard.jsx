@@ -176,7 +176,7 @@ const SuperAdminDashboard = ({ theme, toggleTheme }) => {
             {/* System Health */}
             <div className="glass card" style={{ padding: '2rem' }}>
               <h3 style={{ marginBottom: '1.5rem' }}>System Health</h3>
-              <div className="grid grid-3" style={{ gap: '1rem' }}>
+              <div className="grid grid-3 superadmin-stats">
                 <div style={{ padding: '1.5rem', background: 'rgba(46,204,113,0.08)', borderRadius: '15px', border: '1px solid rgba(46,204,113,0.15)' }}>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Total Transactions</p>
                   <h2 style={{ color: 'var(--primary-green)', margin: 0 }}>{platformStats.transactions}</h2>
@@ -454,7 +454,7 @@ const SuperAdminDashboard = ({ theme, toggleTheme }) => {
 
       {/* KPI Cards */}
       {activeTab === 'overview' && (
-        <div className="grid grid-4" style={{ marginBottom: '2rem', gap: '1rem' }}>
+        <div className="grid grid-4 superadmin-kpis">
           {stats.map((stat, i) => (
             <div key={i} className="glass card">
               <div className="flex-between" style={{ marginBottom: '1rem' }}>
@@ -468,7 +468,7 @@ const SuperAdminDashboard = ({ theme, toggleTheme }) => {
       )}
 
       {/* Tab Nav */}
-      <div className="flex gap-1" style={{ marginBottom: '2rem', background: 'var(--white)', padding: '5px', borderRadius: '12px', width: 'fit-content', border: '1px solid var(--glass-border)' }}>
+      <div className="flex dashboard-tab-nav">
         {tabs.map(tab => (
           <button
             key={tab.key}

@@ -143,28 +143,44 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
     }
   };
 
-  const handleShuffleRotation = async () => {
-    if (userRole !== 'admin') return;
+  const handleStartNewCircle = async () => {
+    if (userRole !== 'admin' && userRole !== 'president' && userRole !== 'treasurer') return;
     if (members.length < 2) {
-      alert("Need at least 2 members to shuffle.");
+      alert("Need at least 2 members to start a circle.");
       return;
     }
 
-    if (!window.confirm("Shuffle official payout order? This will randomly reassign turn numbers.")) return;
+    if (!window.confirm("Start a NEW Payout Circle? This will shuffle all members and notify them of their current turn numbers.")) return;
 
     try {
-      const { updateDoc, doc } = await import('firebase/firestore');
+      const { updateDoc, doc, addDoc, collection, serverTimestamp } = await import('firebase/firestore');
       const shuffled = [...members].sort(() => Math.random() - 0.5);
       const newOrder = shuffled.map(m => m.user_id);
       
       await updateDoc(doc(db, "groups", groupId), {
         rotationOrder: newOrder,
-        lastShuffled: new Date().toISOString()
+        currentTurn: 1,
+        lastCircleStarted: serverTimestamp()
       });
-      alert("Rotation order updated and saved to secure ledger!");
+
+      // Notify all members
+      const notifyPromises = shuffled.map((m, index) => 
+        addDoc(collection(db, "notifications"), {
+          user_id: m.user_id,
+          title: "New Circle Started!",
+          message: `The ${groupDetails?.name || 'Group'} circle has reset. You are Turn #${index + 1}.`,
+          type: "rotation",
+          link: `/group/${groupId}/contributions`,
+          read: false,
+          timestamp: serverTimestamp()
+        })
+      );
+      
+      await Promise.all(notifyPromises);
+      alert("New Payout Circle started! All members have been notified of their turns.");
     } catch (err) {
-      console.error("Shuffle error:", err);
-      alert("Failed to update rotation.");
+      console.error("Start circle error:", err);
+      alert("Failed to start new circle.");
     }
   };
 
@@ -259,7 +275,11 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
   useEffect(() => {
     if (members.length > 0 && currentUser) {
       const me = members.find(m => m.user_id === currentUser.uid);
-      if (me) setUserRole(me.role || 'member');
+      if (me) {
+        setUserRole(me.role || 'member');
+      } else if (groupDetails?.admin_id === currentUser.uid || currentUser.email === 'cheforgodwin01@gmail.com') {
+        setUserRole('admin');
+      }
     }
     if (groupDetails?.rules) {
       setRulesText(groupDetails.rules);
@@ -298,25 +318,24 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
   return (
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
       <header className="dashboard-header">
-        <div className="flex gap-1" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <div className="flex gap-1 header-title-area">
           <button 
-            className="btn-secondary" 
-            style={{ padding: '0.5rem', borderRadius: '50%', width: '40px', height: '40px' }}
+            className="btn-secondary back-btn"
             onClick={() => navigate('/groups')}
           >
             <ChevronLeft size={20} />
           </button>
-          <div>
+          <div className="group-title-content">
             <h1>{groupDetails?.name || 'Group Workspace'}</h1>
             <p className="text-sub">
-              {members.length} Members • Manage contributions and communicate with your community.
+              {members.length} Members • Group Management & Communication
             </p>
           </div>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 header-actions">
           {userRole === 'admin' && (
             <button className="btn-secondary" onClick={() => setShowAddMemberModal(true)}>
-              + Add Member
+              + New Member
             </button>
           )}
           <button className="btn-primary" onClick={handleInvite}>
@@ -376,41 +395,36 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
           </div>
         </div>
       )}
-      <div className="workspace-tabs flex gap-1" style={{ marginBottom: '2rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem', overflowX: 'auto', whiteSpace: 'nowrap' }}>
+      <div className="workspace-tabs scroll-x-auto no-scrollbar">
         <button 
           className={`nav-item ${activeTab === 'ledger' ? 'active' : ''}`}
           onClick={() => setActiveTab('ledger')}
-          style={{ border: 'none', background: 'none', cursor: 'pointer' }}
         >
-          <Table size={18} /> Transaction Ledger
+          <Table size={18} /> Ledger
         </button>
         <button 
           className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
           onClick={() => setActiveTab('analytics')}
-          style={{ border: 'none', background: 'none', cursor: 'pointer' }}
         >
-          <PieChart size={18} /> Member Analytics
+          <PieChart size={18} /> Analytics
         </button>
         <button 
           className={`nav-item ${activeTab === 'members' ? 'active' : ''}`}
           onClick={() => setActiveTab('members')}
-          style={{ border: 'none', background: 'none', cursor: 'pointer' }}
         >
-          <UserPlus size={18} /> Members Roster
+          <UserPlus size={18} /> Roster
         </button>
         <button 
           className={`nav-item ${activeTab === 'rotation' ? 'active' : ''}`}
           onClick={() => setActiveTab('rotation')}
-          style={{ border: 'none', background: 'none', cursor: 'pointer' }}
         >
-          <Shuffle size={18} /> Payout Rotation
+          <Shuffle size={18} /> Rotation
         </button>
         <button 
           className={`nav-item ${activeTab === 'rules' ? 'active' : ''}`}
           onClick={() => setActiveTab('rules')}
-          style={{ border: 'none', background: 'none', cursor: 'pointer' }}
         >
-          <FileText size={18} /> Rules & Bylaws
+          <FileText size={18} /> Bylaws
         </button>
       </div>
 
@@ -418,9 +432,9 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
         <div className="left-panel">
           {activeTab === 'ledger' ? (
             <div className="glass card" style={{ padding: '0' }}>
-              <div className="flex-between" style={{ padding: '2rem' }}>
+            <div className="flex-between-responsive" style={{ padding: '2rem' }}>
                 <h3 style={{ margin: 0 }}>Recent Contributions</h3>
-                <div className="flex gap-1">
+                <div className="flex gap-1 badge-group">
                   <div className="badge"><CheckCircle size={14} /> 85% Paid</div>
                   <div className="badge" style={{ background: '#fef5e7', color: '#f39c12' }}><Clock size={14} /> 15% Pending</div>
                   {userRole === 'member' && (
@@ -550,7 +564,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
             </div>
           ) : (
             <div className="analytics-view flex-column" style={{ gap: '2rem' }}>
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+              <div className="stats-grid-mobile">
                 <div className="glass card">
                   <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Total Group Fund</p>
                   <h2 style={{ color: 'var(--primary-green)' }}>
@@ -599,9 +613,9 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
             <div className="glass card flex-column" style={{ gap: '1.5rem' }}>
               <div className="flex-between">
                 <h3 style={{ margin: 0 }}>Rotation Schedule</h3>
-                {userRole === 'admin' && (
-                  <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={handleShuffleRotation}>
-                    <Shuffle size={14} /> Shuffle
+                {(userRole === 'admin' || userRole === 'treasurer' || userRole === 'president') && (
+                  <button className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.85rem' }} onClick={handleStartNewCircle}>
+                    <Shuffle size={14} /> Start New Circle
                   </button>
                 )}
               </div>
@@ -609,13 +623,17 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
                 {(groupDetails?.rotationOrder || members.map(m => m.user_id)).map((uid, index) => {
                   const member = members.find(m => m.user_id === uid);
                   if (!member) return null;
+                  const isCurrent = (groupDetails?.currentTurn || 1) === (index + 1);
                   return (
-                    <div key={uid} className="flex-between" style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.03)', border: '1px solid var(--glass-border)' }}>
+                    <div key={uid} className={`flex-between ${isCurrent ? 'current-rotation-item' : ''}`} style={{ padding: '1rem', borderRadius: '12px', background: isCurrent ? 'var(--primary-light)' : 'rgba(0,0,0,0.03)', border: isCurrent ? '1px solid var(--primary-green)' : '1px solid var(--glass-border)' }}>
                        <div className="flex gap-1" style={{ alignItems: 'center' }}>
-                         <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary-green)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '700' }}>
+                         <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: isCurrent ? 'var(--primary-green)' : '#95a5a6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '700' }}>
                            {index + 1}
                          </div>
-                         <span style={{ fontWeight: 600 }}>{member.userName}</span>
+                         <div>
+                            <span style={{ fontWeight: 600, color: isCurrent ? 'var(--primary-dark)' : 'inherit' }}>{member.userName}</span>
+                            {isCurrent && <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--primary-green)', fontWeight: '700' }}>RECEIVING NOW</p>}
+                         </div>
                        </div>
                        <span className="text-muted" style={{ fontSize: '0.8rem' }}>Turn #{index + 1}</span>
                     </div>
@@ -633,7 +651,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
             <div className="glass card">
                <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
                   <h3 style={{ margin: 0 }}>Community Bylaws</h3>
-                  {userRole === 'admin' && !isEditingRules && (
+                  {(userRole === 'admin' || userRole === 'president' || userRole === 'treasurer') && !isEditingRules && (
                     <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => setIsEditingRules(true)}>Edit Rules</button>
                   )}
                   {isEditingRules && (

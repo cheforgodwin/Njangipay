@@ -9,7 +9,7 @@ import {
   Target
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, doc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from './MainLayout';
@@ -97,17 +97,17 @@ const UserDashboard = ({ theme, toggleTheme }) => {
         </div>
       </header>
 
-      <div className="grid grid-3" style={{ marginBottom: '2rem' }}>
+      <div className="dashboard-grid">
         <div className="glass card wallet-card-primary">
           <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
             <Wallet />
             <Plus style={{ cursor: 'pointer' }} onClick={() => navigate('/wallet')} />
           </div>
           <p className="text-muted" style={{ fontSize: '0.9rem' }}>Total Saved Balance</p>
-          <h2 className="hero-title" style={{ fontSize: 'clamp(1.5rem, 6vw, 2.5rem)', margin: '0.5rem 0' }}>
+          <h2 className="hero-title balance-text">
             {walletBalance.toLocaleString()} XAF
           </h2>
-          <div className="flex gap-2" style={{ marginTop: '1.5rem', fontSize: '0.85rem' }}>
+          <div className="flex gap-2 sync-status">
             <span>Real-time Sync Active</span>
           </div>
         </div>
@@ -188,7 +188,7 @@ const UserDashboard = ({ theme, toggleTheme }) => {
 
          <div className="glass card">
             <h3 style={{ marginBottom: '1.5rem' }}>Quick Actions</h3>
-            <div className="grid grid-2" style={{ gap: '1rem' }}>
+          <div className="mobile-grid-2">
                <div className="flex-center" style={{ flexDirection: 'column', padding: '1.5rem', borderRadius: '15px', background: '#f0fbf4', cursor: 'pointer' }} onClick={() => navigate('/wallet')}>
                   <Plus color="var(--primary-green)" style={{ marginBottom: '0.5rem' }} />
                   <p style={{ fontSize: '0.85rem', fontWeight: '600' }}>Deposit</p>

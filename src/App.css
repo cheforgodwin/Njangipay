@@ -118,7 +118,7 @@
 }
 
 .hero-title {
-  font-size: 4.5rem;
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
   line-height: 1.1;
   margin-bottom: 1.5rem;
 }
@@ -128,7 +128,7 @@
 }
 
 .hero-description {
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 2vw, 1.25rem);
   max-width: 520px;
   margin: 1.5rem 0;
   line-height: 1.6;
@@ -200,9 +200,17 @@
 
 /* Stats Section */
 .stats-grid {
+  display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 2rem;
   margin-top: 6rem;
+}
+
+@media (max-width: 992px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 }
 
 .stat-card {
@@ -233,10 +241,17 @@
 }
 
 .quick-links-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   justify-content: center;
   margin-top: 3rem;
+}
+
+@media (max-width: 768px) {
+  .quick-links-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .quick-link-card {
