@@ -193,7 +193,7 @@ const Marketplace = ({ theme, toggleTheme }) => {
   return (
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
         <header className="dashboard-header">
-          <div>
+          <div className="header-title-area">
             <h1>{view === 'market' ? 'Loan Marketplace' : 'My Portfolio'}</h1>
             <p className="text-sub">
               {view === 'market' 
@@ -201,11 +201,11 @@ const Marketplace = ({ theme, toggleTheme }) => {
                 : 'Manage your active loans and investments.'}
             </p>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 header-actions">
              <button className="btn-secondary" onClick={() => setView(view === 'market' ? 'portfolio' : 'market')}>
                {view === 'market' ? 'My Portfolio' : 'Back to Market'}
              </button>
-             <button className="btn-primary" onClick={() => setShowLoanModal(true)}>Post Loan Request</button>
+             <button className="btn-primary" onClick={() => setShowLoanModal(true)}>Post Request</button>
           </div>
         </header>
 
@@ -273,7 +273,7 @@ const Marketplace = ({ theme, toggleTheme }) => {
           </div>
         )}
 
-        <div className="activity-grid" style={{ gridTemplateColumns: '1.8fr 1fr' }}>
+        <div className="activity-grid marketplace-layout">
           <div>
             <div className="search-filter-bar">
               <div className="search-input-wrapper">
@@ -293,26 +293,26 @@ const Marketplace = ({ theme, toggleTheme }) => {
                 <div className="flex-center" style={{ height: '200px' }}>Analyzing Trust Ledger...</div>
               ) : filteredLoans.length > 0 ? (
                 filteredLoans.map((req) => (
-                  <div key={req.id} className="glass card">
-                     <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
-                        <div className="flex gap-1" style={{ alignItems: 'center' }}>
-                           <div className="flex-center" style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'var(--primary-green)', color: '#fff', fontWeight: '800' }}>
-                              {req.user ? req.user.split(' ')[0][0] : 'U'}
+                  <div key={req.id} className="glass card marketplace-card">
+                     <div className="flex-between-responsive marketplace-card-header" style={{ marginBottom: '1.5rem' }}>
+                        <div className="flex gap-1 marketplace-user-info" style={{ alignItems: 'center' }}>
+                           <div className="flex-center marketplace-avatar" style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'var(--primary-green)', color: '#fff', fontWeight: '800' }}>
+                               {req.user ? req.user.split(' ')[0][0] : 'U'}
                            </div>
-                           <div>
-                              <h3 style={{ margin: 0 }}>{req.user || 'Anonymous'}</h3>
-                              <p className="text-muted" style={{ fontSize: '0.85rem' }}>Request ID: {req.id.substring(0,8).toUpperCase()} • Community Verified</p>
+                           <div className="marketplace-user-details">
+                               <h3 style={{ margin: 0 }}>{req.user || 'Anonymous'}</h3>
+                               <p className="text-muted" style={{ fontSize: '0.85rem' }}>ID: {req.id.substring(0,8).toUpperCase()} • Verified</p>
                            </div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                           <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>AI Risk Score</p>
-                           <div className="flex gap-1" style={{ alignItems: 'center', fontWeight: '700', color: (req.aiScore || 0) > 0.8 ? 'var(--primary-green)' : '#f39c12' }}>
+                        <div className="marketplace-risk-info">
+                           <p className="text-muted risk-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>AI Risk Score</p>
+                           <div className="flex gap-1 risk-value" style={{ alignItems: 'center', fontWeight: '700', color: (req.aiScore || 0) > 0.8 ? 'var(--primary-green)' : '#f39c12' }}>
                               <BrainCircuit size={16} /> {(req.aiScore * 100).toFixed(0)}% Confidence
                            </div>
                         </div>
                      </div>
 
-                     <div className="grid grid-4" style={{ gap: '1rem', padding: '1.5rem', background: 'var(--accent-light)', borderRadius: '12px' }}>
+                     <div className="grid grid-4 marketplace-stats-box">
                         <div>
                            <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>Amount</p>
                            <p style={{ fontWeight: '800', fontSize: '1.1rem' }}>{req.amount?.toLocaleString() || req.amount} XAF</p>
@@ -333,10 +333,10 @@ const Marketplace = ({ theme, toggleTheme }) => {
                         </div>
                      </div>
 
-                      <div className="flex gap-1" style={{ marginTop: '1.5rem' }}>
+                     <div className="flex gap-1 marketplace-actions" style={{ marginTop: '1.5rem' }}>
                         {view === 'market' ? (
                           <button 
-                            className="btn-primary" 
+                            className="btn-primary marketplace-btn-fund" 
                             style={{ flex: 2 }} 
                             onClick={() => handleFundLoan(req)}
                             disabled={req.status === 'funded' || req.status === 'repaid'}
@@ -347,21 +347,21 @@ const Marketplace = ({ theme, toggleTheme }) => {
                           <>
                             {req.user_id === currentUser?.uid && req.status === 'funded' && (
                               <button 
-                                className="btn-primary" 
+                                className="btn-primary marketplace-btn-repay" 
                                 style={{ flex: 2, background: 'var(--primary-dark)' }} 
                                 onClick={() => handleRepayLoan(req)}
                               >
-                                Repay Loan <CreditCard size={18} />
+                                Repay <CreditCard size={18} />
                               </button>
                             )}
-                            <div className="badge" style={{ flex: 1, justifyContent: 'center', height: 'auto', padding: '10px' }}>
-                              Status: {req.status?.toUpperCase()}
+                            <div className="badge marketplace-status-badge" style={{ flex: 1, justifyContent: 'center', height: 'auto', padding: '10px' }}>
+                               {req.status?.toUpperCase()}
                             </div>
                           </>
                         )}
-                        <button className="btn-secondary" style={{ flex: 1 }}>Details</button>
+                        <button className="btn-secondary marketplace-btn-details" style={{ flex: 1 }}>Details</button>
                       </div>
-                   </div>
+                  </div>
                 ))
               ) : (
                 <div className="glass card flex-center" style={{ padding: '3rem', flexDirection: 'column', gap: '1rem', textAlign: 'center' }}>
@@ -375,6 +375,7 @@ const Marketplace = ({ theme, toggleTheme }) => {
                 </div>
               )}
             </div>
+>
           </div>
 
           <div className="flex" style={{ flexDirection: 'column', gap: '2rem' }}>

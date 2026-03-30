@@ -260,3 +260,20 @@
     width: 100%;
   }
 }
+
+.marketplace-layout {
+  grid-template-columns: 1.8fr 1fr;
+}
+
+.marketplace-stats-box {
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--accent-light);
+  border-radius: 12px;
+}
+
+@media (max-width: 1024px) {
+  .marketplace-layout {
+    grid-template-columns: 1fr;
+  }
+}
