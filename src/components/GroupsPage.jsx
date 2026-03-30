@@ -279,7 +279,7 @@ const GroupsPage = ({ theme, toggleTheme }) => {
         </div>
       </div>
 
-      <div className="groups-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
+      <div className="groups-grid">
         {loading ? (
           <div className="flex-center" style={{ gridColumn: '1/-1', padding: '4rem' }}>
             <div className="typing-indicator">Loading groups...</div>

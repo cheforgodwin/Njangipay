@@ -189,3 +189,60 @@
   padding: 40px;
   text-align: center;
 }
+
+/* Wallet Responsiveness */
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: stretch !important;
+  }
+
+  .dashboard-header .flex {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .dashboard-header button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wallet-card-primary-wrapper {
+    padding: 2rem 1.5rem;
+    border-radius: 20px;
+  }
+
+  .wallet-balance-amount {
+    margin-bottom: 2rem;
+  }
+
+  .wallet-action-btn {
+    width: 100%;
+    padding: 0.8rem;
+  }
+
+  .wallet-txn-item {
+    padding: 1.5rem;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .wallet-txn-right {
+    text-align: left;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    padding-top: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .wallet-card-primary-wrapper {
+    padding: 1.5rem 1rem;
+  }
+}

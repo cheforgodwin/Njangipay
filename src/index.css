@@ -173,29 +173,46 @@ a {
 }
 
 /* Mobile Responsiveness for Global Styles */
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
 @media (max-width: 768px) {
-  h1 { font-size: 2.5rem; }
-  h2 { font-size: 2rem; }
+  h1 { font-size: 2.25rem; }
+  h2 { font-size: 1.75rem; }
   h3 { font-size: 1.25rem; }
   
   .container {
-    padding: 0 1rem;
+    padding: 0 1.25rem;
   }
   
   .card {
     padding: 1.5rem;
   }
+
+  .grid-2, .grid-3 { grid-template-columns: 1fr !important; }
+  .grid-4 { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 480px) {
-  h1 { font-size: 2rem; }
-  h2 { font-size: 1.75rem; }
+  h1 { font-size: 1.8rem; }
+  h2 { font-size: 1.5rem; }
   
   .btn-primary, .btn-secondary {
-    padding: 0.8rem 1.2rem;
-    font-size: 0.95rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .container {
+    padding: 0 1rem;
   }
 }
+
+/* Base Grid Classes (Desktop) */
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+
 /* Footer Section */
 .footer-container {
   background: var(--off-white);

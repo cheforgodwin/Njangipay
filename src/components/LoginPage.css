@@ -204,11 +204,29 @@
   }
 
   .auth-subtitle {
-    font-size: 0.9rem;
-    margin-bottom: 1.5rem;
-  }
+     font-size: 0.9rem;
+     margin-bottom: 1.5rem;
+   }
+ 
+   .auth-toggle {
+     margin-bottom: 1.5rem;
+   }
+}
 
-  .auth-toggle {
-    margin-bottom: 1.5rem;
+/* Auth Page Responsive Fixes */
+.auth-page-container header {
+   width: 100%;
+}
+
+.auth-card div[style*="display: flex"] {
+   flex-wrap: wrap;
+   gap: 10px !important;
+}
+
+@media (max-width: 400px) {
+  .auth-card .chip {
+    flex: 1 1 100%;
+    justify-content: center;
   }
 }
+

@@ -30,12 +30,12 @@ const UserDashboard = ({ theme, toggleTheme }) => {
     if (!currentUser) return;
 
     // 1. Listen for user profile/wallet updates
-    const userRef = query(collection(db, "users"), where("uid", "==", currentUser.uid));
-    const unsubscribeUser = onSnapshot(userRef, (snapshot) => {
-      if (!snapshot.empty) {
-        setWalletBalance(snapshot.docs[0].data().balance || 0);
+    const userDocRef = doc(db, "users", currentUser.uid);
+    const unsubscribeUser = onSnapshot(userDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setWalletBalance(snapshot.data().balance || 0);
       } else {
-        setWalletBalance(500000); // Demo fallback
+        setWalletBalance(0); // Demo fallback
       }
     });
 

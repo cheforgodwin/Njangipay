@@ -4,7 +4,9 @@ import {
   CreditCard, 
   ArrowUpRight, 
   ArrowDownLeft, 
-  Plus
+  Plus,
+  CheckCircle,
+  X
 } from 'lucide-react';
 import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -27,6 +29,7 @@ const WalletPage = ({ theme, toggleTheme }) => {
   const [amount, setAmount] = useState('');
   const [recipientId, setRecipientId] = useState('');
   const [recipientBank, setRecipientBank] = useState('Ecobank');
+  const [successData, setSuccessData] = useState(null); // { title: '', message: '' }
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
@@ -57,7 +60,10 @@ const WalletPage = ({ theme, toggleTheme }) => {
 
       setShowWithdrawModal(false);
       setAmount('');
-      alert(`Success! ${withdrawAmount.toLocaleString()} XAF sent to your ${recipientBank} account.`);
+      setSuccessData({
+        title: 'Withdrawal Successful',
+        message: `Success! ${withdrawAmount.toLocaleString()} XAF sent to your ${recipientBank} account.`
+      });
     } catch (error) {
       console.error("Withdrawal error:", error);
       alert("Withdrawal failed.");
@@ -68,14 +74,15 @@ const WalletPage = ({ theme, toggleTheme }) => {
     if (!currentUser) return;
 
     // 1. Get user document and balance
-    const userQuery = query(collection(db, "users"), where("uid", "==", currentUser.uid));
-    const unsubscribeUser = onSnapshot(userQuery, (snapshot) => {
-      if (!snapshot.empty) {
-        const userData = snapshot.docs[0].data();
+    const userDocRef = doc(db, "users", currentUser.uid);
+    const unsubscribeUser = onSnapshot(userDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const userData = snapshot.data();
         setBalance(userData.balance || 0);
-        setUserDocId(snapshot.docs[0].id);
+        setUserDocId(snapshot.id);
       } else {
-        setBalance(500000); // Fallback
+        setBalance(0); // Fallback
+        setUserDocId(currentUser.uid); // Assume ID is UID even if doc missing yet
       }
     });
 
@@ -123,7 +130,10 @@ const WalletPage = ({ theme, toggleTheme }) => {
 
       setShowDepositModal(false);
       setAmount('');
-      alert(`Success! ${depositAmount.toLocaleString()} XAF added to your wallet.`);
+      setSuccessData({
+        title: 'Refill Successful',
+        message: `Success! ${depositAmount.toLocaleString()} XAF added to your wallet.`
+      });
     } catch (error) {
       console.error("Deposit error:", error);
       alert("Deposit failed. Please try again.");
@@ -149,7 +159,10 @@ const WalletPage = ({ theme, toggleTheme }) => {
         setShowTransferModal(false);
         setAmount('');
         setRecipientId('');
-        alert(`Successfully transferred ${transferAmount.toLocaleString()} XAF to NP-${recipientId}.`);
+        setSuccessData({
+          title: 'Transfer Completed',
+          message: `Successfully transferred ${transferAmount.toLocaleString()} XAF to NP-${recipientId}.`
+        });
       } else {
         alert(`Transfer failed: ${result.error}`);
       }
@@ -188,13 +201,34 @@ const WalletPage = ({ theme, toggleTheme }) => {
                   required 
                   placeholder="25,000"
                   className="wallet-modal-input"
+                  min="500"
                 />
               </div>
-              <div className="flex gap-1">
-                <button type="button" onClick={() => setShowDepositModal(false)} className="btn-secondary wallet-modal-btn">Cancel</button>
-                <button type="submit" className="btn-primary wallet-modal-btn">Confirm Deposit</button>
+              <div style={{ padding: '1rem', background: 'var(--accent-light)', borderRadius: '12px', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
+                <p style={{ margin: 0, color: 'var(--text-sub)' }}>Processing via <strong>Nexus Secure Gateway</strong>. Funds will reflect instantly.</p>
+              </div>
+              <div className="flex gap-1" style={{ marginTop: '1rem' }}>
+                <button type="button" onClick={() => setShowDepositModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn-primary" style={{ flex: 2, gap: '10px' }}>
+                  <CheckCircle size={18} /> Confirm Deposit
+                </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {successData && (
+        <div className="modal-overlay" style={{ zIndex: 3000 }}>
+          <div className="glass modal-content" style={{ textAlign: 'center', maxWidth: '400px' }}>
+             <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(46, 204, 113, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                <CheckCircle size={48} color="var(--primary-green)" />
+             </div>
+             <h2 style={{ color: 'var(--primary-green)', marginBottom: '0.5rem' }}>{successData.title}</h2>
+             <p className="text-sub" style={{ marginBottom: '2rem', lineHeight: '1.6' }}>{successData.message}</p>
+             <button className="btn-primary" style={{ width: '100%' }} onClick={() => setSuccessData(null)}>
+               Great, Thanks!
+             </button>
           </div>
         </div>
       )}

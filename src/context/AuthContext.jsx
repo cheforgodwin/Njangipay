@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }) => {
     const res = await createUserWithEmailAndPassword(auth, email, password);
     // Initialize Firestore user doc
     await setDoc(doc(db, "users", res.user.uid), {
+      uid: res.user.uid,
       email,
       phoneNumber,
       role: email === 'cheforgodwin01@gmail.com' ? 'super-admin' : (
@@ -55,6 +56,7 @@ export const AuthProvider = ({ children }) => {
     const userDoc = await getDoc(doc(db, "users", res.user.uid));
     if (!userDoc.exists()) {
       await setDoc(doc(db, "users", res.user.uid), {
+        uid: res.user.uid,
         email: res.user.email,
         role: 'user',
         createdAt: new Date().toISOString()
