@@ -102,3 +102,26 @@
 .admin-modal-btn {
   flex: 1;
 }
+
+/* Admin Responsiveness */
+@media (max-width: 768px) {
+  .admin-modal-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start !important;
+  }
+  
+  .admin-modal-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .admin-modal-btn {
+    width: 100%;
+  }
+
+  .admin-add-card {
+    padding: 2rem 1.5rem;
+    min-height: 150px;
+  }
+}

@@ -4,10 +4,15 @@ import {
   ChevronLeft, 
   Table, 
   PieChart, 
-  CheckCircle, 
+  CheckCircle,
   Clock,
   UserPlus,
-  Copy
+  Copy,
+  Shuffle,
+  FileText,
+  AlertCircle,
+  Save,
+  MessageSquare
 } from 'lucide-react';
 import { collection, query, where, onSnapshot, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -31,6 +36,9 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [isEditingRules, setIsEditingRules] = useState(false);
+  const [rulesText, setRulesText] = useState('');
+  const [structuredRules, setStructuredRules] = useState([]); // Array of { rule: '', fine: 0 }
 
   const handleInvite = () => {
     setShowInviteModal(true);
@@ -135,6 +143,60 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
     }
   };
 
+  const handleShuffleRotation = async () => {
+    if (userRole !== 'admin') return;
+    if (members.length < 2) {
+      alert("Need at least 2 members to shuffle.");
+      return;
+    }
+
+    if (!window.confirm("Shuffle official payout order? This will randomly reassign turn numbers.")) return;
+
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      const shuffled = [...members].sort(() => Math.random() - 0.5);
+      const newOrder = shuffled.map(m => m.user_id);
+      
+      await updateDoc(doc(db, "groups", groupId), {
+        rotationOrder: newOrder,
+        lastShuffled: new Date().toISOString()
+      });
+      alert("Rotation order updated and saved to secure ledger!");
+    } catch (err) {
+      console.error("Shuffle error:", err);
+      alert("Failed to update rotation.");
+    }
+  };
+
+  const handleSaveRules = async () => {
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      await updateDoc(doc(db, "groups", groupId), {
+        rules: rulesText,
+        structuredRules: structuredRules
+      });
+      setIsEditingRules(false);
+      alert("Community Bylaws updated.");
+    } catch (err) {
+      console.error("Rules save error:", err);
+      alert("Failed to save rules.");
+    }
+  };
+
+  const addRuleField = () => {
+    setStructuredRules([...structuredRules, { rule: '', fine: 0 }]);
+  };
+
+  const removeRuleField = (index) => {
+    setStructuredRules(structuredRules.filter((_, i) => i !== index));
+  };
+
+  const updateRuleField = (index, field, value) => {
+    const updated = [...structuredRules];
+    updated[index][field] = value;
+    setStructuredRules(updated);
+  };
+
   useEffect(() => {
     if (!groupId) return;
     setLoading(true);
@@ -199,7 +261,13 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
       const me = members.find(m => m.user_id === currentUser.uid);
       if (me) setUserRole(me.role || 'member');
     }
-  }, [members, currentUser]);
+    if (groupDetails?.rules) {
+      setRulesText(groupDetails.rules);
+    }
+    if (groupDetails?.structuredRules) {
+      setStructuredRules(groupDetails.structuredRules);
+    }
+  }, [members, currentUser, groupDetails]);
 
   if (loading && !groupDetails) {
     return (
@@ -308,7 +376,6 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
           </div>
         </div>
       )}
-
       <div className="workspace-tabs flex gap-1" style={{ marginBottom: '2rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem', overflowX: 'auto', whiteSpace: 'nowrap' }}>
         <button 
           className={`nav-item ${activeTab === 'ledger' ? 'active' : ''}`}
@@ -330,6 +397,20 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
           style={{ border: 'none', background: 'none', cursor: 'pointer' }}
         >
           <UserPlus size={18} /> Members Roster
+        </button>
+        <button 
+          className={`nav-item ${activeTab === 'rotation' ? 'active' : ''}`}
+          onClick={() => setActiveTab('rotation')}
+          style={{ border: 'none', background: 'none', cursor: 'pointer' }}
+        >
+          <Shuffle size={18} /> Payout Rotation
+        </button>
+        <button 
+          className={`nav-item ${activeTab === 'rules' ? 'active' : ''}`}
+          onClick={() => setActiveTab('rules')}
+          style={{ border: 'none', background: 'none', cursor: 'pointer' }}
+        >
+          <FileText size={18} /> Rules & Bylaws
         </button>
       </div>
 
@@ -513,11 +594,121 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
           )}
         </div>
 
-        {(activeTab === 'ledger' || activeTab === 'members') && (
-          <div className="right-panel">
+        <div className="right-panel">
+          {activeTab === 'rotation' ? (
+            <div className="glass card flex-column" style={{ gap: '1.5rem' }}>
+              <div className="flex-between">
+                <h3 style={{ margin: 0 }}>Rotation Schedule</h3>
+                {userRole === 'admin' && (
+                  <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={handleShuffleRotation}>
+                    <Shuffle size={14} /> Shuffle
+                  </button>
+                )}
+              </div>
+              <div className="rotation-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {(groupDetails?.rotationOrder || members.map(m => m.user_id)).map((uid, index) => {
+                  const member = members.find(m => m.user_id === uid);
+                  if (!member) return null;
+                  return (
+                    <div key={uid} className="flex-between" style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.03)', border: '1px solid var(--glass-border)' }}>
+                       <div className="flex gap-1" style={{ alignItems: 'center' }}>
+                         <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary-green)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '700' }}>
+                           {index + 1}
+                         </div>
+                         <span style={{ fontWeight: 600 }}>{member.userName}</span>
+                       </div>
+                       <span className="text-muted" style={{ fontSize: '0.8rem' }}>Turn #{index + 1}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ padding: '1rem', background: '#e8f8f5', borderRadius: '10px', display: 'flex', gap: '10px' }}>
+                <AlertCircle size={18} color="var(--primary-green)" />
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--primary-dark)' }}>
+                  This order determine payouts. {userRole === 'admin' ? 'Shuffling updates this for everyone.' : 'Contact admin to change sequence.'}
+                </p>
+              </div>
+            </div>
+          ) : activeTab === 'rules' ? (
+            <div className="glass card">
+               <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+                  <h3 style={{ margin: 0 }}>Community Bylaws</h3>
+                  {userRole === 'admin' && !isEditingRules && (
+                    <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => setIsEditingRules(true)}>Edit Rules</button>
+                  )}
+                  {isEditingRules && (
+                    <button className="btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={handleSaveRules}>
+                      <Save size={14} /> Save
+                    </button>
+                  )}
+               </div>
+               {isEditingRules ? (
+                 <div className="flex-column" style={{ gap: '1.5rem' }}>
+                   <div>
+                     <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem' }}>General Bylaws & Description</label>
+                     <textarea 
+                       className="auth-input" 
+                       style={{ width: '100%', height: '150px', padding: '1rem', background: 'white', color: 'black' }}
+                       value={rulesText}
+                       onChange={e => setRulesText(e.target.value)}
+                       placeholder="Enter group context, mission, etc..."
+                     />
+                   </div>
+
+                   <div>
+                     <label className="form-label" style={{ display: 'block', marginBottom: '1rem' }}>Protocols & Penalties (Fines)</label>
+                     {structuredRules.map((sr, idx) => (
+                       <div key={idx} className="flex gap-1" style={{ marginBottom: '1rem', alignItems: 'center' }}>
+                         <input 
+                           type="text" 
+                           placeholder="Rule / Violation (e.g. Late Meeting Arrival)" 
+                           className="auth-input" 
+                           style={{ flex: 3, padding: '10px' }}
+                           value={sr.rule}
+                           onChange={(e) => updateRuleField(idx, 'rule', e.target.value)}
+                         />
+                         <input 
+                           type="number" 
+                           placeholder="Fine (XAF)" 
+                           className="auth-input" 
+                           style={{ flex: 1, padding: '10px' }}
+                           value={sr.fine}
+                           onChange={(e) => updateRuleField(idx, 'fine', parseInt(e.target.value) || 0)}
+                         />
+                         <button className="btn-secondary" style={{ padding: '10px', color: '#e74c3c' }} onClick={() => removeRuleField(idx)}>×</button>
+                       </div>
+                     ))}
+                     <button className="btn-secondary" style={{ width: '100%', border: '1px dashed var(--glass-border)', background: 'transparent' }} onClick={addRuleField}>
+                       + Add Penalty Protocol
+                     </button>
+                   </div>
+                 </div>
+               ) : (
+                 <div className="rules-display flex-column" style={{ gap: '2rem' }}>
+                   <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', color: 'var(--text-main)' }}>
+                     {groupDetails?.rules || "No official bylaws have been posted for this community yet."}
+                   </div>
+                   
+                   {structuredRules.length > 0 && (
+                     <div className="fines-board" style={{ marginTop: '1rem' }}>
+                        <h4 style={{ marginBottom: '1rem', color: 'var(--primary-dark)' }}>Penalty Scale</h4>
+                        <div className="flex-column" style={{ gap: '10px' }}>
+                          {structuredRules.map((sr, idx) => (
+                            <div key={idx} className="flex-between" style={{ padding: '0.75rem 1rem', background: 'rgba(231, 76, 60, 0.05)', borderRadius: '8px', borderLeft: '4px solid #e74c3c' }}>
+                               <span style={{ fontWeight: 600 }}>{sr.rule}</span>
+                               <span style={{ fontWeight: 800, color: '#e74c3c' }}>{sr.fine?.toLocaleString()} XAF Fine</span>
+                            </div>
+                          ))}
+                        </div>
+                     </div>
+                   )}
+                 </div>
+               )}
+            </div>
+          ) : (
             <CommunityChat groupId={groupId} />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </MainLayout>
   );

@@ -123,3 +123,45 @@
 .btn-locked {
   opacity: 0.5;
 }
+
+/* Payout Rotation Responsiveness */
+@media (max-width: 768px) {
+  .payout-cycle-card {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .rotation-item {
+    flex-direction: column;
+    gap: 1.25rem;
+    align-items: flex-start !important;
+  }
+
+  .rotation-item > div:first-child {
+    width: 100%;
+  }
+
+  .rotation-amount-wrapper {
+    text-align: left;
+    margin-right: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    padding-top: 1rem;
+  }
+
+  .rotation-item button {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .rotation-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start !important;
+  }
+}
+
