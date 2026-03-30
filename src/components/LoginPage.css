@@ -230,3 +230,23 @@
   }
 }
 
+
+/* Google Button Styling */
+.google-btn {
+  background: white !important;
+  color: #5f6368 !important;
+  border: 1px solid #dadce0 !important;
+  font-weight: 500 !important;
+  padding: 10px 16px !important;
+  transition: background-color 0.2s, box-shadow 0.2s !important;
+  box-shadow: 0 1px 2px rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15) !important;
+}
+
+.google-btn:hover {
+  background-color: #f8f9fa !important;
+  box-shadow: 0 1px 2px rgba(60,64,67,0.3), 0 4px 6px 2px rgba(60,64,67,0.15) !important;
+}
+
+.google-btn:active {
+  background-color: #e8eaed !important;
+}

@@ -174,6 +174,32 @@ const WalletPage = ({ theme, toggleTheme }) => {
     }
   };
 
+  const handleExportHistory = () => {
+    if (transactions.length === 0) return alert("No transaction history to export.");
+    
+    const rows = [
+      ['NjangiPay Wallet History'],
+      ['User', currentUser.displayName || currentUser.email],
+      ['Current Balance (XAF)', balance.toLocaleString()],
+      ['Export Date', new Date().toLocaleDateString()],
+      [''],
+      ['TRANSACTION LIST'],
+      ['Type', 'Title', 'Amount (XAF)', 'Status', 'Date']
+    ];
+
+    transactions.forEach(t => {
+      const date = t.timestamp?.toDate ? t.timestamp.toDate().toLocaleDateString() : 'N/A';
+      rows.push([t.type || 'Transaction', t.title || 'Other', t.amount || 0, t.status || 'Completed', date]);
+    });
+
+    const csvContent = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `NjangiPay_Wallet_History_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
   return (
     <MainLayout theme={theme} toggleTheme={toggleTheme}>
       <header className="dashboard-header">
@@ -181,7 +207,7 @@ const WalletPage = ({ theme, toggleTheme }) => {
           <h1>My Wallet</h1>
         </div>
         <div className="flex-between-responsive header-actions">
-            <button className="btn-secondary" onClick={() => window.print()}><Download size={18} /> Export</button>
+            <button className="btn-secondary" onClick={handleExportHistory}><Download size={18} /> Export</button>
             <button className="btn-secondary wallet-btn-withdraw" onClick={() => setShowWithdrawModal(true)}><ArrowUpRight size={18} /> Withdraw</button>
             <button className="btn-primary" onClick={() => setShowDepositModal(true)}><Plus size={18} /> Add Funds</button>
         </div>
@@ -307,22 +333,26 @@ const WalletPage = ({ theme, toggleTheme }) => {
 
       <div className="dashboard-grid wallet-grid">
         <div>
-          <div className="glass card wallet-card-primary wallet-card-primary-wrapper">
-            <div className="flex-between wallet-balance-header">
-               <span>Wallet Balance</span>
-               <CreditCard size={20} />
+          <div className="glass card wallet-card-primary no-padding">
+            <div className="card-header">
+              <div className="flex-between wallet-balance-header">
+                 <span>Wallet Balance</span>
+                 <CreditCard size={20} />
+              </div>
+              <h2 className="hero-title wallet-balance-amount">
+                {balance.toLocaleString()} XAF
+              </h2>
             </div>
-            <h2 className="hero-title wallet-balance-amount">
-              {balance.toLocaleString()} XAF
-            </h2>
             
-            <div className="flex gap-1 wallet-actions-container">
-               <button className="btn-primary wallet-action-btn wallet-action-deposit" onClick={() => setShowDepositModal(true)}>
-                  <Download size={18} /> Deposit
-               </button>
-               <button className="btn-primary wallet-action-btn wallet-action-transfer" onClick={() => setShowTransferModal(true)}>
-                  <ArrowUpRight size={18} /> Transfer
-               </button>
+            <div className="card-body">
+              <div className="flex gap-1 wallet-actions-container">
+                 <button className="btn-primary wallet-action-btn wallet-action-deposit" onClick={() => setShowDepositModal(true)}>
+                    <Download size={18} /> Deposit
+                 </button>
+                 <button className="btn-primary wallet-action-btn wallet-action-transfer" onClick={() => setShowTransferModal(true)}>
+                    <ArrowUpRight size={18} /> Transfer
+                 </button>
+              </div>
             </div>
           </div>
 
@@ -345,13 +375,13 @@ const WalletPage = ({ theme, toggleTheme }) => {
           </div>
         </div>
 
-        <div className="glass card wallet-history-card">
-           <div className="flex-between wallet-history-header">
-             <h3 className="wallet-history-title">Transaction History</h3>
-             <button className="btn-secondary">Full History</button>
+        <div className="glass card wallet-history-card no-padding">
+           <div className="flex-between card-header">
+             <h3 className="wallet-history-title" style={{ margin: 0 }}>Recent Activity</h3>
+             <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>Full History</button>
            </div>
            
-           <div className="wallet-history-list">
+           <div className="card-body" style={{ padding: '0' }}>
               {loading ? (
                  <div className="flex-center wallet-history-loading">Loading transactions...</div>
               ) : transactions.length > 0 ? (

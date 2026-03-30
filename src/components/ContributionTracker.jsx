@@ -12,7 +12,8 @@ import {
   FileText,
   AlertCircle,
   Save,
-  MessageSquare
+  MessageSquare,
+  Download
 } from 'lucide-react';
 import { collection, query, where, onSnapshot, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -213,6 +214,33 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
     setStructuredRules(updated);
   };
 
+  const handleExportReport = () => {
+    if (!groupDetails) return;
+    
+    const rows = [
+      ['NjangiPay Community Report'],
+      ['Group Name', groupDetails.name],
+      ['Total Members', members.length],
+      ['Total Fund (XAF)', contributions.reduce((acc, curr) => acc + (curr.amount || 0), 0)],
+      ['Full Report Date', new Date().toLocaleDateString()],
+      [''],
+      ['CONTRIBUTION LEDGER'],
+      ['Member', 'Amount (XAF)', 'Status', 'Date']
+    ];
+
+    contributions.forEach(c => {
+      const date = c.timestamp?.toDate ? c.timestamp.toDate().toLocaleDateString() : 'N/A';
+      rows.push([c.userName || 'Member', c.amount || 0, c.status || 'Pending', date]);
+    });
+
+    const csvContent = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${groupDetails.name.replace(/\s+/g, '_')}_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
   useEffect(() => {
     if (!groupId) return;
     setLoading(true);
@@ -332,12 +360,15 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
             </p>
           </div>
         </div>
-        <div className="flex gap-1 header-actions">
+        <div className="header-actions">
           {userRole === 'admin' && (
             <button className="btn-secondary" onClick={() => setShowAddMemberModal(true)}>
-              + New Member
+              + Member
             </button>
           )}
+          <button className="btn-secondary" onClick={handleExportReport}>
+            <Download size={18} /> Export
+          </button>
           <button className="btn-primary" onClick={handleInvite}>
             <UserPlus size={18} /> Invite
           </button>
@@ -564,7 +595,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
             </div>
           ) : (
             <div className="analytics-view flex-column" style={{ gap: '2rem' }}>
-              <div className="stats-grid-mobile">
+              <div className="mobile-grid-2">
                 <div className="glass card">
                   <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Total Group Fund</p>
                   <h2 style={{ color: 'var(--primary-green)' }}>
