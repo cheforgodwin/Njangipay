@@ -13,7 +13,11 @@ import {
   AlertCircle,
   Save,
   MessageSquare,
-  Download
+  Download,
+  CreditCard,
+  TrendingDown,
+  TrendingUp,
+  Briefcase
 } from 'lucide-react';
 import { collection, query, where, onSnapshot, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -37,9 +41,27 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [showCreateSubgroupModal, setShowCreateSubgroupModal] = useState(false);
+  const [newSubgroup, setNewSubgroup] = useState({
+    name: '',
+    focus: '',
+    entry: '10,000',
+    type: 'public',
+    description: '',
+    frequency: 'Monthly',
+    meetingDay: 'Last Sunday'
+  });
+  const [subgroups, setSubgroups] = useState([]);
   const [isEditingRules, setIsEditingRules] = useState(false);
   const [rulesText, setRulesText] = useState('');
   const [structuredRules, setStructuredRules] = useState([]); // Array of { rule: '', fine: 0 }
+  const [groupLoans, setGroupLoans] = useState([]);
+  const [showLoanModal, setShowLoanModal] = useState(false);
+  const [newLoanRequest, setNewLoanRequest] = useState({
+    amount: '',
+    purpose: '',
+    duration: '3 Months'
+  });
 
   const handleInvite = () => {
     setShowInviteModal(true);
@@ -68,7 +90,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
       // 2. Add to members collection
       await addDoc(collection(db, "members"), {
         user_id: targetUserId,
-        userName: targetUser.userName || newMemberEmail.split('@')[0],
+        userName: targetUser.username || targetUser.fullName || newMemberEmail.split('@')[0],
         group_id: groupId,
         groupName: groupDetails?.name || 'Group',
         joined_at: serverTimestamp(),
@@ -84,6 +106,49 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
     } catch (error) {
       console.error("Manual add error:", error);
       alert("Failed to add member.");
+    }
+  };
+
+  const handleCreateSubgroup = async (e) => {
+    e.preventDefault();
+    if (!currentUser || !groupDetails?.id) return;
+    if (!newSubgroup.name.trim()) {
+      alert('Subgroup name is required.');
+      return;
+    }
+
+    try {
+      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+      const subgroupDoc = await addDoc(collection(db, 'groups'), {
+        ...newSubgroup,
+        parent_id: groupDetails.id,
+        parent_name: groupDetails.name,
+        admin_id: currentUser.uid,
+        members: 1,
+        status: 'Active',
+        createdAt: serverTimestamp()
+      });
+
+      await addDoc(collection(db, 'members'), {
+        user_id: currentUser.uid,
+        userName: getUserDisplayName(),
+        group_id: subgroupDoc.id,
+        groupName: newSubgroup.name,
+        joined_at: serverTimestamp(),
+        aiRiskScore: 1.0,
+        totalContributed: 0,
+        status: 'active',
+        role: 'admin'
+      });
+
+      setShowCreateSubgroupModal(false);
+      setNewSubgroup({
+        name: '', focus: '', entry: '10,000', type: 'public', description: '', frequency: 'Monthly', meetingDay: 'Last Sunday'
+      });
+      alert(`Subgroup "${newSubgroup.name}" created successfully.`);
+    } catch (err) {
+      console.error('Create subgroup error:', err);
+      alert('Failed to create subgroup.');
     }
   };
 
@@ -257,6 +322,16 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
       }
     });
 
+    // 1b. Subgroups under this community
+    const subgroupsQuery = query(collection(db, "groups"), where("parent_id", "==", groupId), orderBy("createdAt", "desc"));
+    const unsubscribeSubgroups = onSnapshot(subgroupsQuery, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setSubgroups(data);
+    }, (error) => {
+      console.warn("Subgroups fetch failed:", error);
+      setSubgroups([]);
+    });
+
     // 2. Fetch contributions for this group
     const q = query(
       collection(db, "transactions"), 
@@ -279,26 +354,47 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
       setLoading(false);
     });
 
-    // 4. Fetch all members of this group
-    const membersQuery = query(
-      collection(db, "members"), 
-      where("group_id", "==", groupId)
-    );
-    const unsubscribeMembers = onSnapshot(membersQuery, (snapshot) => {
-      const membersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Sort client-side
-      membersData.sort((a, b) => (b.joined_at?.seconds || 0) - (a.joined_at?.seconds || 0));
-      setMembers(membersData);
-    }, (error) => {
-      console.warn("Members fetch failed:", error);
+    // 3. Load Group Loans
+    const loansQuery = query(collection(db, "group_loans"), where("group_id", "==", groupId), orderBy("timestamp", "desc"));
+    const unsubscribeLoans = onSnapshot(loansQuery, (snapshot) => {
+      setGroupLoans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
     return () => {
       unsubscribeGroup();
       unsubscribeTrans();
       unsubscribeMembers();
+      unsubscribeLoans();
+      unsubscribeSubgroups();
     };
   }, [groupId, currentUser]);
+
+  const handleRequestGroupLoan = async (e) => {
+    e.preventDefault();
+    if (!currentUser || !newLoanRequest.amount) return;
+
+    try {
+      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+      await addDoc(collection(db, "group_loans"), {
+        group_id: groupId,
+        user_id: currentUser.uid,
+        userName: getUserDisplayName(),
+        amount: parseFloat(newLoanRequest.amount),
+        purpose: newLoanRequest.purpose,
+        duration: newLoanRequest.duration,
+        interestRate: groupDetails?.loanInterest || "5%",
+        status: 'pending',
+        timestamp: serverTimestamp()
+      });
+
+      alert("Loan request submitted to group administrators!");
+      setShowLoanModal(false);
+      setNewLoanRequest({ amount: '', purpose: '', duration: '3 Months' });
+    } catch (error) {
+      console.error("Loan request error:", error);
+      alert("Failed to submit loan request.");
+    }
+  };
 
   useEffect(() => {
     if (members.length > 0 && currentUser) {
@@ -316,6 +412,17 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
       setStructuredRules(groupDetails.structuredRules);
     }
   }, [members, currentUser, groupDetails]);
+
+  const contributionsWithNames = contributions.map(item => {
+    const resolvedName = item.userName ||
+      members.find(m => m.user_id === item.user_id)?.userName ||
+      item.user_id?.substring(0, 8).toUpperCase() ||
+      'Member';
+    return {
+      ...item,
+      userName: resolvedName
+    };
+  });
 
   if (loading && !groupDetails) {
     return (
@@ -355,16 +462,26 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
           </button>
           <div className="group-title-content">
             <h1>{groupDetails?.name || 'Group Workspace'}</h1>
-            <p className="text-sub">
+            <p
+              className="text-sub"
+              style={{ cursor: 'pointer', textDecoration: 'underline', display: 'inline-block' }}
+              onClick={() => setActiveTab('members')}
+              title="Click to view members"
+            >
               {members.length} Members • Group Management & Communication
             </p>
           </div>
         </div>
         <div className="header-actions">
           {userRole === 'admin' && (
-            <button className="btn-secondary" onClick={() => setShowAddMemberModal(true)}>
-              + Member
-            </button>
+            <>
+              <button className="btn-secondary" onClick={() => setShowAddMemberModal(true)}>
+                + Member
+              </button>
+              <button className="btn-secondary" onClick={() => setShowCreateSubgroupModal(true)}>
+                + Subgroup
+              </button>
+            </>
           )}
           <button className="btn-secondary" onClick={handleExportReport}>
             <Download size={18} /> Export
@@ -396,6 +513,72 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
               <div className="flex gap-1">
                 <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowAddMemberModal(false)}>Cancel</button>
                 <button type="submit" className="btn-primary" style={{ flex: 1 }}>Add to Roster</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showCreateSubgroupModal && (
+        <div className="modal-overlay">
+          <div className="glass modal-content" style={{ maxWidth: '500px' }}>
+            <h2>Create Subgroup Under {groupDetails?.name}</h2>
+            <p className="text-sub" style={{ marginBottom: '1.5rem' }}>Create a subgroup circle that is part of this main community.</p>
+            <form onSubmit={handleCreateSubgroup}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Subgroup Name</label>
+                <input
+                  type="text"
+                  className="auth-input"
+                  style={{ width: '100%' }}
+                  value={newSubgroup.name}
+                  onChange={e => setNewSubgroup({...newSubgroup, name: e.target.value})}
+                  placeholder="e.g. Savings Team A"
+                  required
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Focus</label>
+                <input
+                  type="text"
+                  className="auth-input"
+                  style={{ width: '100%' }}
+                  value={newSubgroup.focus}
+                  onChange={e => setNewSubgroup({...newSubgroup, focus: e.target.value})}
+                  placeholder="e.g. Daily contributions"
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Entry amount</label>
+                <input
+                  type="text"
+                  className="auth-input"
+                  style={{ width: '100%' }}
+                  value={newSubgroup.entry}
+                  onChange={e => setNewSubgroup({...newSubgroup, entry: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-1 grid-2" style={{ marginBottom: '1rem' }}>
+                <select
+                  value={newSubgroup.frequency}
+                  onChange={e => setNewSubgroup({...newSubgroup, frequency: e.target.value})}
+                  className="auth-input"
+                >
+                  <option value="Weekly">Weekly</option>
+                  <option value="Monthly">Monthly</option>
+                  <option value="Bi-Weekly">Bi-Weekly</option>
+                </select>
+                <input
+                  type="text"
+                  value={newSubgroup.meetingDay}
+                  onChange={e => setNewSubgroup({...newSubgroup, meetingDay: e.target.value})}
+                  className="auth-input"
+                  placeholder="Meeting Day"
+                />
+              </div>
+              <div className="flex gap-1">
+                <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowCreateSubgroupModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Create Subgroup</button>
               </div>
             </form>
           </div>
@@ -452,6 +635,12 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
           <Shuffle size={18} /> Rotation
         </button>
         <button 
+          className={`nav-item ${activeTab === 'loans' ? 'active' : ''}`}
+          onClick={() => setActiveTab('loans')}
+        >
+          <CreditCard size={18} /> Loans
+        </button>
+        <button 
           className={`nav-item ${activeTab === 'rules' ? 'active' : ''}`}
           onClick={() => setActiveTab('rules')}
         >
@@ -491,7 +680,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {contributions.length > 0 ? contributions.map(item => (
+                    {contributionsWithNames.length > 0 ? contributionsWithNames.map(item => (
                       <tr key={item.id}>
                         <td>
                           <div className="flex gap-1" style={{ alignItems: 'center' }}>
@@ -595,16 +784,16 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
             </div>
           ) : (
             <div className="analytics-view flex-column" style={{ gap: '2rem' }}>
-              <div className="mobile-grid-2">
+              <div className="grid-3" style={{ marginBottom: '1rem' }}>
                 <div className="glass card">
                   <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Total Group Fund</p>
-                  <h2 style={{ color: 'var(--primary-green)' }}>
+                  <h2 style={{ color: 'var(--primary-green)', margin: 0 }}>
                     {contributions.reduce((acc, curr) => acc + (curr.amount || 0), 0).toLocaleString()} XAF
                   </h2>
                 </div>
                 <div className="glass card">
                   <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Punctuality Rate</p>
-                  <h2 style={{ color: '#f39c12' }}>
+                  <h2 style={{ color: '#f39c12', margin: 0 }}>
                     {contributions.length > 0 
                       ? Math.round((contributions.filter(c => c.status === 'Paid').length / contributions.length) * 100) 
                       : 0}%
@@ -612,7 +801,7 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
                 </div>
                 <div className="glass card">
                   <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Total Transactions</p>
-                  <h2>{contributions.length}</h2>
+                  <h2 style={{ margin: 0 }}>{contributions.length}</h2>
                 </div>
               </div>
 
@@ -640,6 +829,25 @@ const ContributionTracker = ({ theme, toggleTheme }) => {
         </div>
 
         <div className="right-panel">
+          {subgroups.length > 0 && (
+            <div className="glass card" style={{ marginBottom: '1rem' }}>
+              <h3 style={{ margin: '0 0 0.75rem 0' }}>Subgroups</h3>
+              <div className="flex-column" style={{ gap: '0.6rem' }}>
+                {subgroups.map((sub) => (
+                  <button
+                    key={sub.id}
+                    className="btn-secondary"
+                    style={{ justifyContent: 'space-between', width: '100%' }}
+                    onClick={() => navigate(`/group/${sub.id}/contributions`)}
+                  >
+                    <span>{sub.name}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{sub.members || 0} members</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'rotation' ? (
             <div className="glass card flex-column" style={{ gap: '1.5rem' }}>
               <div className="flex-between">

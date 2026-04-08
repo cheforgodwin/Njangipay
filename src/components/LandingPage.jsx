@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { 
   Users, 
   ShieldCheck, 
@@ -18,6 +19,27 @@ const HERO_BG = heroBg;
 
 const LandingPage = ({ theme, toggleTheme }) => {
   const navigate = useNavigate();
+  const { currentUser, userData, loading: authLoading } = useAuth();
+
+  const getRoleRedirect = (role) => {
+    if (role === 'super-admin') return '/super-admin';
+    if (role === 'bank-admin') return '/bank-dashboard';
+    if (role === 'admin') return '/admin/communities';
+    if (role === 'community-admin') return '/admin/communities';
+    if (role === 'community') return '/groups';
+    if (role === 'leader') return '/leader';
+    if (role === 'auditor') return '/auditor';
+    return '/dashboard';
+  };
+
+  const handleGetStarted = () => {
+    if (currentUser && !authLoading) {
+      const target = getRoleRedirect(userData?.role || 'user');
+      navigate(target);
+    } else {
+      navigate('/login');
+    }
+  };
   return (
     <div className="landing-wrapper">
       <Navbar theme={theme} />
@@ -37,7 +59,7 @@ const LandingPage = ({ theme, toggleTheme }) => {
               Join trusted circles, automate your contributions, and access fair credit based on your community standing.
             </p>
             <div className="hero-actions">
-              <button onClick={() => navigate('/login')} className="btn-primary">
+              <button onClick={handleGetStarted} className="btn-primary">
                 Get Started <ArrowRight size={20} />
               </button>
               <button className="btn-secondary">Watch Video</button>

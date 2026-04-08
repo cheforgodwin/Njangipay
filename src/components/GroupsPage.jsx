@@ -8,7 +8,7 @@ import {
   Shield, 
   ArrowRight
 } from 'lucide-react';
-import { collection, query, onSnapshot, orderBy, where, addDoc, serverTimestamp, doc, runTransaction, increment } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, where, addDoc, serverTimestamp, doc, runTransaction, increment, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from './MainLayout';
@@ -24,10 +24,17 @@ const GroupsPage = ({ theme, toggleTheme }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newGroup, setNewGroup] = useState({
+    name: '',
+    focus: '',
+    entry: '',
+    type: 'public',
     description: '',
     frequency: 'Monthly',
     meetingDay: 'Last Sunday'
   });
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [groupMembers, setGroupMembers] = useState([]);
 
   useEffect(() => {
     // 1. Fetch all groups
@@ -114,7 +121,7 @@ const GroupsPage = ({ theme, toggleTheme }) => {
       setShowCreateModal(false);
       setNewGroup({ name: '', type: 'public', focus: 'P2P Savings', entry: '10,000', description: '', frequency: 'Monthly', meetingDay: 'Last Sunday' });
       alert("Community circle created successfully!");
-      navigate(`/group/${docRef.id}/contributions`);
+      navigate(`/group/${docRef.id}`);
     } catch (error) {
       console.error("Create group error:", error);
       alert("Failed to create group.");
@@ -128,7 +135,7 @@ const GroupsPage = ({ theme, toggleTheme }) => {
     }
 
     if (userMemberships.has(group.id)) {
-      navigate(`/group/${group.id}/contributions`);
+      navigate(`/group/${group.id}`);
       return;
     }
 
@@ -166,6 +173,23 @@ const GroupsPage = ({ theme, toggleTheme }) => {
     }
   };
 
+  const handleViewMembers = async (group) => {
+    setSelectedGroup(group);
+    try {
+      const memQuery = query(collection(db, "members"), where("group_id", "==", group.id));
+      const snapshot = await getDocs(memQuery);
+      const members = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setGroupMembers(members);
+      setShowMembersModal(true);
+    } catch (error) {
+      console.error("Error fetching members:", error);
+      alert("Failed to load members.");
+    }
+  };
+
   const filteredGroups = groups.filter(group => 
     group.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     group.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -193,7 +217,7 @@ const GroupsPage = ({ theme, toggleTheme }) => {
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>Group Name</label>
                 <input 
                   type="text" 
-                  value={newGroup.name} 
+                  value={newGroup.name || ''} 
                   onChange={(e) => setNewGroup({...newGroup, name: e.target.value})}
                   required 
                   placeholder="e.g. Douala Savvy Savers"
@@ -267,6 +291,47 @@ const GroupsPage = ({ theme, toggleTheme }) => {
         </div>
       )}
 
+      {showMembersModal && selectedGroup && (
+        <div className="modal-overlay">
+          <div className="glass modal-content" style={{ maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h2>Members of {selectedGroup.name}</h2>
+            <div style={{ marginTop: '20px' }}>
+              {groupMembers.length > 0 ? (
+                <div className="members-list">
+                  {groupMembers.map(member => (
+                    <div key={member.id} className="member-item" style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      padding: '12px', 
+                      border: '1px solid var(--glass-border)', 
+                      borderRadius: '8px', 
+                      marginBottom: '8px',
+                      background: 'var(--glass-bg)'
+                    }}>
+                      <div>
+                        <strong>{member.userName}</strong>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          Role: {member.role} • Joined: {member.joined_at?.toDate ? member.joined_at.toDate().toLocaleDateString() : 'N/A'}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                        Contributed: {member.totalContributed || 0} XAF
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted">No members found in this group.</p>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
+              <button onClick={() => setShowMembersModal(false)} className="btn-secondary" style={{ flex: 1 }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="search-filter-bar">
         <div className="search-input-wrapper glass">
           <Search className="search-icon" size={20} />
@@ -296,7 +361,11 @@ const GroupsPage = ({ theme, toggleTheme }) => {
                 {group.type === 'public' ? <Globe size={14} /> : <Shield size={14} />}
                 {group.type || 'Community'}
               </div>
-              <div className="flex gap-1" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              <div 
+                className="flex gap-1" 
+                style={{ color: 'var(--text-muted)', fontSize: '0.85rem', cursor: 'pointer' }}
+                onClick={() => handleViewMembers(group)}
+              >
                 <Users size={16} /> {group.members || 0} Members
               </div>
             </div>

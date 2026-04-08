@@ -3,6 +3,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
+import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -19,6 +20,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 // Initialize Firestore with persistent cache (replaces deprecated enableIndexedDbPersistence)
 const db = initializeFirestore(app, {
@@ -28,4 +30,4 @@ const db = initializeFirestore(app, {
 const googleProvider = new GoogleAuthProvider();
 const functions = getFunctions(app);
 
-export { auth, db, googleProvider, functions };
+export { auth, db, googleProvider, functions, storage };

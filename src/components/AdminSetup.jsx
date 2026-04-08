@@ -5,8 +5,8 @@ import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { ShieldAlert, CheckCircle, ArrowRight } from 'lucide-react';
 
-const NexusSetup = () => {
-  const { currentUser, userData } = useAuth();
+const AdminSetup = () => {
+  const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
@@ -32,7 +32,7 @@ const NexusSetup = () => {
       <div className="flex-center" style={{ height: '100vh', flexDirection: 'column', gap: '20px' }}>
         <ShieldAlert size={60} color="#e74c3c" />
         <h2>Authentication Required</h2>
-        <p>Please login first to use the Nexus Setup utility.</p>
+        <p>Please login first to use the NjangiPay Setup utility.</p>
         <button onClick={() => navigate('/login')} className="btn-primary">Go to Login</button>
       </div>
     );
@@ -45,7 +45,7 @@ const NexusSetup = () => {
           <ShieldAlert size={30} />
         </div>
         
-        <h2>Nexus Admin Setup</h2>
+        <h2>NjangiPay Admin Setup</h2>
         <p className="text-sub" style={{ margin: '15px 0 25px' }}>
           This utility will promote your current account (<b>{currentUser.email}</b>) to the <b>super-admin</b> role. 
           This grants global access to the system.
@@ -63,7 +63,7 @@ const NexusSetup = () => {
               className="btn-primary" 
               style={{ marginTop: '20px', width: '100%' }}
             >
-              Enter Nexus Command <ArrowRight size={18} />
+              Enter NjangiPay Command <ArrowRight size={18} />
             </button>
           </div>
         ) : (
@@ -85,4 +85,4 @@ const NexusSetup = () => {
   );
 };
 
-export default NexusSetup;
+export default AdminSetup;

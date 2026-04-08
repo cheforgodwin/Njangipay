@@ -46,16 +46,97 @@ service cloud.firestore {
     // Groups
     match /groups/{groupId} {
       allow read: if isSignedIn();
-      allow write: if isGroupLeader(groupId);
+      allow write: if isSignedIn() && (
+        resource.data.admin_id == request.auth.uid || 
+        isSuperAdmin() ||
+        isGroupLeader(groupId)
+      );
     }
 
-    // Members
+    // Group Members
     match /members/{memberId} {
-      allow read: if isSignedIn();
-      allow write: if isGroupLeader(resource.data.group_id);
-      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
+      allow read: if isSignedIn() && (
+        resource.data.user_id == request.auth.uid ||
+        isGroupLeader(resource.data.group_id) ||
+        isSuperAdmin()
+      );
+      allow write: if isSignedIn() && (
+        isGroupLeader(resource.data.group_id) ||
+        isSuperAdmin()
+      );
     }
 
+    // Contributions
+    match /contributions/{contributionId} {
+      allow read: if isSignedIn() && (
+        resource.data.user_id == request.auth.uid ||
+        isGroupLeader(resource.data.group_id) ||
+        isSuperAdmin()
+      );
+      allow write: if isSignedIn() && (
+        isGroupLeader(resource.data.group_id) ||
+        isSuperAdmin()
+      );
+    }
+
+    // Loans
+    match /loans/{loanId} {
+      allow read: if isSignedIn() && (
+        resource.data.borrower_id == request.auth.uid ||
+        isGroupLeader(resource.data.group_id) ||
+        isSuperAdmin()
+      );
+      allow write: if isSignedIn() && (
+        isGroupLeader(resource.data.group_id) ||
+        isSuperAdmin()
+      );
+    }
+
+    // Rotation
+    match /rotation/{rotationId} {
+      allow read: if isSignedIn() && (
+        resource.data.member_id == request.auth.uid ||
+        isGroupLeader(resource.data.group_id) ||
+        isSuperAdmin()
+      );
+      allow write: if isSignedIn() && (
+        isGroupLeader(resource.data.group_id) ||
+        isSuperAdmin()
+      );
+    }
+
+    // Audit Logs
+    match /audit_logs/{auditId} {
+      allow read: if isSignedIn() && (
+        isGroupLeader(resource.data.group_id) ||
+        isSuperAdmin()
+      );
+      allow create: if isSignedIn();
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && (
+        resource.data.user_id == request.auth.uid ||
+        isGroupLeader(resource.data.group_id) ||
+        isSuperAdmin()
+      );
+      allow write: if isSignedIn();
+    }
+
+    // Meetings
+    match /meetings/{meetingId} {
+      allow read: if isSignedIn() && (
+        resource.data.group_id in get(/databases/$(database)/documents/members/$(request.auth.uid)).data.group_ids ||
+        isSuperAdmin()
+      );
+      allow write: if isSignedIn() && (
+        isGroupLeader(resource.data.group_id) ||
+        isSuperAdmin()
+      );
+    }
+
+    
     // Transactions
     match /transactions/{transactionId} {
       allow read: if isSignedIn() && (resource.data.user_id == request.auth.uid || isGroupLeader(resource.data.group_id) || isSuperAdmin());

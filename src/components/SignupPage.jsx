@@ -1,17 +1,20 @@
-import { Leaf, Mail, Lock, ArrowRight, User, Phone, CheckCircle, Users, Building2 } from 'lucide-react';
+import { Leaf, Mail, Lock, ArrowRight, User, Phone, CheckCircle, Users, Building2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from './Navbar';
-import logo from '../assets/logo.svg';
 import { auth } from '../config/firebase';
+// Skipping Firebase Storage bucket upload; IDs are stored locally instead.
 import './LoginPage.css'; // Reusing styles
 
 const SignupPage = ({ theme, toggleTheme }) => {
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [idCardFile, setIdCardFile] = useState(null);
   const [accountType, setAccountType] = useState('individual'); // 'individual' or 'community'
   const [communityName, setCommunityName] = useState('');
   const [communityFocus, setCommunityFocus] = useState('');
@@ -32,6 +35,28 @@ const SignupPage = ({ theme, toggleTheme }) => {
     return '/dashboard';
   };
 
+  const storeFileInLocalStorage = (file) => {
+    return new Promise((resolve, reject) => {
+      if (!file) return resolve(null);
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const base64 = reader.result;
+          window.localStorage.setItem('njangipay_kycImage', JSON.stringify({
+            name: file.name,
+            type: file.type,
+            data: base64
+          }));
+          resolve(base64);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  };
+
   async function handleSubmit(e) {
     e.preventDefault();
 
@@ -42,9 +67,34 @@ const SignupPage = ({ theme, toggleTheme }) => {
     try {
       setError('');
       setLoading(true);
+
+      let idCardUrl = '';
+      let idCardLocal = '';
+      if (idCardFile) {
+        try {
+          // Skip Firebase storage upload as requested.
+          idCardLocal = await storeFileInLocalStorage(idCardFile);
+          console.log('ID card stored locally while skipping cloud storage.');
+        } catch (storeErr) {
+          console.warn('ID card local store failed:', storeErr);
+          setError('Unable to store ID for verification. Please try again later.');
+          setLoading(false);
+          return;
+        }
+      } else if (accountType !== 'individual') {
+        // ID card suggested for community/bank, but not required for now
+        console.warn('ID card not provided for non-individual account; proceeding without it.');
+        // setError('Please upload your ID/Passport to verify identity.');
+        // setLoading(false);
+        // return;
+      }
       
       const extraData = {
+        fullName,
+        idCardUrl,
+        idCardLocal,
         accountType,
+        isVerified: false, // Pending KYC
         ...(accountType === 'community' && { 
           communityName, 
           communityFocus,
@@ -52,15 +102,18 @@ const SignupPage = ({ theme, toggleTheme }) => {
         })
       };
 
-      const result = await signup(email, password, phoneNumber, extraData);
-      setLoading(false);
+      const result = await signup(fullName, password, phoneNumber, { ...extraData, username: fullName });
+      console.log('Signup completed for', result.user.uid, 'username', fullName, 'role', extraData.role);
       setError('');
       // Inform about verification
-      alert('Account created! Please check your email inbox to verify your account before logging in.');
-      navigate('/login');
+      alert('Account created! Your identity is being verified. Please check your email inbox to verify your account.');
+      // directly send to dashboard/role route if you want immediate dashboard experience while user verifies.
+      navigate(getRoleRedirect(extraData.role || 'user'), { replace: true });
+
     } catch (err) {
-      setError('Failed to create an account.');
+      setError('Failed to create an account. ' + err.message);
       console.error(err);
+    } finally {
       setLoading(false);
     }
   }
@@ -120,7 +173,6 @@ const SignupPage = ({ theme, toggleTheme }) => {
       <div className="auth-wrapper">
         <div className="glass auth-card">
           <Link to="/" className="auth-logo logo">
-             <img src={logo} alt="NjangiPay" className="logo-icon" />
              NjangiPay
           </Link>
           
@@ -148,7 +200,7 @@ const SignupPage = ({ theme, toggleTheme }) => {
                   onClick={() => { setUsePhone(false); setError(''); }} 
                   className={`btn-toggle ${!usePhone ? 'active' : ''}`}
                 >
-                  Email
+                  Username
                 </button>
                 <button 
                   onClick={() => { setUsePhone(true); setError(''); }} 
@@ -184,21 +236,23 @@ const SignupPage = ({ theme, toggleTheme }) => {
 
           {!usePhone ? (
             <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="email">Email Address</label>
+                <div className="form-group">
+                <label className="form-label" htmlFor="fullName">Name (this becomes your local username)</label>
                 <div className="input-wrapper">
-                  <Mail className="input-icon" size={18} />
+                  <User size={18} className="input-icon" />
                   <input 
-                    type="email" 
-                    id="email"
-                    name="email"
+                    type="text" 
+                    id="fullName"
                     className="auth-input"
-                    placeholder="name@example.com" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your name" 
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
                     required
                   />
                 </div>
+                <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                  Public display name + sign-in identifier. No email needed.
+                </p>
               </div>
 
               {accountType === 'community' && (
@@ -255,7 +309,7 @@ const SignupPage = ({ theme, toggleTheme }) => {
               )}
 
               <div className="form-group">
-                <label className="form-label" htmlFor="phoneNumber">Phone Number</label>
+                <label className="form-label" htmlFor="phoneNumber">Phone Number (Cameroon MTN/Orange)</label>
                 <div className="input-wrapper">
                   <Phone className="input-icon" size={18} />
                   <input 
@@ -263,11 +317,30 @@ const SignupPage = ({ theme, toggleTheme }) => {
                     id="phoneNumber"
                     name="phoneNumber"
                     className="auth-input"
-                    placeholder="+1234567890" 
+                    placeholder="e.g. 650123456 or +237650123456" 
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                   />
                 </div>
+                <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                  Accepts MTN/Orange numbers beginning with 6 and formatted as +2376XXXXXXXX.
+                </p>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" htmlFor="idCard">ID Card / Passport Upload</label>
+                <div className="input-wrapper" style={{ padding: '4px' }}>
+                  <Building2 className="input-icon" size={18} />
+                  <input 
+                    type="file" 
+                    id="idCard"
+                    className="auth-input"
+                    style={{ padding: '8px' }}
+                    onChange={(e) => setIdCardFile(e.target.files[0])}
+                    accept="image/*,.pdf"
+                  />
+                </div>
+                <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>Max size 5MB. PDF or Image preferred.</p>
               </div>
               
               <div className="form-group">
@@ -275,7 +348,7 @@ const SignupPage = ({ theme, toggleTheme }) => {
                 <div className="input-wrapper">
                   <Lock className="input-icon" size={18} />
                   <input 
-                    type="password" 
+                    type={showPassword ? "text" : "password"} 
                     id="password"
                     name="password"
                     className="auth-input"
@@ -284,15 +357,23 @@ const SignupPage = ({ theme, toggleTheme }) => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                  <button 
+                    type="button" 
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 
               <div className="form-group">
                 <label className="form-label" htmlFor="confirmPassword">Confirm Password</label>
                 <div className="input-wrapper">
-                  <Lock className="input-icon" size={18} />
+                  <ShieldCheck className="input-icon" size={18} />
                   <input 
-                    type="password" 
+                    type={showConfirmPassword ? "text" : "password"} 
                     id="confirmPassword"
                     name="confirmPassword"
                     className="auth-input"
@@ -301,6 +382,14 @@ const SignupPage = ({ theme, toggleTheme }) => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                   />
+                  <button 
+                    type="button" 
+                    className="password-toggle"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
               

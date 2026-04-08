@@ -14,37 +14,34 @@ const aiClient = new PredictionServiceClient();
  * Cloud Function to get AI response for the chat assistant.
  * Using onCall for modern Firebase Function integration.
  */
-exports.getAiResponse = onCall({ maxInstances: 10 }, async (request) => {
+exports.getAiResponse = onCall({ 
+  maxInstances: 10,
+  cors: true // Explicitly enable CORS for cross-origin requests from localhost
+}, async (request) => {
   try {
-    // 1. Validate request
     const userQuery = request.data?.query;
-    if (!userQuery) {
-      return { error: "No query provided." };
-    }
+    if (!userQuery) return { error: "No query provided." };
 
-    // 2. Fetch API Key
     const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_AI_API_KEY;
     if (!apiKey) {
-      console.error("CRITICAL: GEMINI_API_KEY is missing.");
-      return { error: "AI Backend unconfigured." };
+      console.error("GEMINI_API_KEY is missing in functions env.");
+      return { error: "AI Service unconfigured." };
     }
 
-    const prompt = `You are the NjangiPay Financial AI Expert. User Query: ${userQuery}. (Keep it concise, under 3 sentences).`;
-
-    // 3. API Call
+    // Use 1.5 Flash LATEST on stable v1 - highest rate limits for free tier
     const geminiRes = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
       { contents: [{ parts: [{ text: prompt }] }] },
-      { headers: { 'Content-Type': 'application/json' }, timeout: 8000 }
+      { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
     );
 
     const aiText = geminiRes.data.candidates?.[0]?.content?.parts?.[0]?.text;
-    return { text: aiText || "I couldn't generate a response." };
+    return { text: aiText || "I couldn't generate a clear response. Please try rephrasing." };
 
   } catch (error) {
-    console.error("Function Error:", error.message);
+    console.error("AI Function Error:", error.response?.data || error.message);
     return { 
-      error: "The AI is momentarily unavailable.",
+      error: "Temporary AI delay. Please try again soon.",
       details: error.message 
     };
   }

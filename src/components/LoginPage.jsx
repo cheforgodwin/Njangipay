@@ -1,53 +1,116 @@
-import { Leaf, Mail, Lock, ArrowRight, Phone, CheckCircle } from 'lucide-react';
+import { 
+  Mail, 
+  Lock, 
+  Phone, 
+  User,
+  CheckCircle, 
+  Eye, 
+  EyeOff,
+  ArrowRight
+} from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { auth, storage, db } from '../config/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import Navbar from './Navbar';
-import logo from '../assets/logo.svg';
 import './LoginPage.css';
 
 const LoginPage = ({ theme, toggleTheme }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [usePhone, setUsePhone] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [idCardFile, setIdCardFile] = useState(null);
   const [codeSent, setCodeSent] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, googleSignIn, setupRecaptcha, phoneSignIn, userData } = useAuth();
+  const { currentUser, userData, login, googleSignIn, setupRecaptcha, phoneSignIn, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && currentUser) {
+      const role = userData?.role || 'user';
+      const target = getRoleRedirect(role);
+      console.log('Auto-redirect from login to', target);
+      navigate(target, { replace: true });
+    }
+  }, [currentUser, userData, authLoading, navigate]);
 
   const getRoleRedirect = (role) => {
     if (role === 'super-admin') return '/super-admin';
     if (role === 'bank-admin') return '/bank-dashboard';
     if (role === 'admin') return '/admin/communities';
+    if (role === 'community-admin') return '/admin/communities';
+    if (role === 'community') return '/groups';
+    if (role === 'leader') return '/leader';
+    if (role === 'auditor') return '/auditor';
     return '/dashboard';
   };
 
   async function handleSubmit(e) {
     e.preventDefault();
+    
+    // Form validation
+    if (!username.trim()) {
+      setError('Please enter your username or email');
+      return;
+    }
+    
+    if (!password.trim()) {
+      setError('Please enter your password');
+      return;
+    }
+    
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+    
     try {
       setError('');
       setLoading(true);
-      const result = await login(email, password);
+      const result = await login(username, password);
       
       if (!result.user.emailVerified) {
         alert("Quick Note: Your email is not verified yet. Please check your inbox for the verification link to secure your account.");
       }
 
-      // Fetch user doc to determine role for redirect
-      const { getDoc, doc } = await import('firebase/firestore');
-      const { db } = await import('../config/firebase');
-      const snap = await getDoc(doc(db, 'users', result.user.uid));
-      const role = snap.exists() ? snap.data().role : 'user';
-      navigate(getRoleRedirect(role));
+      // Fetch user doc
+      const userRef = doc(db, 'users', result.user.uid);
+      const snap = await getDoc(userRef);
+      const data = snap.exists() ? snap.data() : {};
+      const role = data.role || 'user';
+      console.log('Login successful, role:', role, 'navigating to:', getRoleRedirect(role));
+
+      // If user provided verification info during login, update their doc
+      if (fullName || idCardFile) {
+        let idUrl = data.idCardUrl || '';
+        if (idCardFile) {
+          const sRef = ref(storage, `kyc/${idCardFile.name}-${Date.now()}`);
+          await uploadBytes(sRef, idCardFile);
+          idUrl = await getDownloadURL(sRef);
+        }
+        await updateDoc(userRef, {
+          fullName: fullName || data.fullName || '',
+          idCardUrl: idUrl,
+          isVerified: false // Admin still needs to check
+        });
+      }
+
+      navigate(getRoleRedirect(role), { replace: true });
+      console.log('Navigated to:', getRoleRedirect(role));
     } catch (err) {
       setError('Failed to log in. Please check your credentials.');
       console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function handleGoogleSignIn() {
@@ -59,15 +122,33 @@ const LoginPage = ({ theme, toggleTheme }) => {
       const { db } = await import('../config/firebase');
       const snap = await getDoc(doc(db, 'users', result.user.uid));
       const role = snap.exists() ? snap.data().role : 'user';
-      navigate(getRoleRedirect(role));
+      navigate(getRoleRedirect(role), { replace: true });
+      console.log('Google signed in, navigated to:', getRoleRedirect(role));
     } catch (err) {
       setError('Failed to sign in with Google.');
       console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
   async function handlePhoneSubmit(e) {
     e.preventDefault();
+    
+    // Phone validation
+    if (!phoneNumber.trim()) {
+      setError('Please enter your phone number');
+      return;
+    }
+    
+    // Validate Cameroon phone number format
+    const phoneRegex = /^(\+237)?6[5-9]\d{7}$/;
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    
+    if (!phoneRegex.test(cleanPhone) && !phoneRegex.test('+' + cleanPhone)) {
+      setError('Please enter a valid Cameroon phone number (MTN/Orange format: 6XXXXXXXX)');
+      return;
+    }
+    
     try {
       setError('');
       setLoading(true);
@@ -84,6 +165,18 @@ const LoginPage = ({ theme, toggleTheme }) => {
 
   async function handleVerifyCode(e) {
     e.preventDefault();
+    
+    // Code validation
+    if (!verificationCode.trim()) {
+      setError('Please enter the verification code');
+      return;
+    }
+    
+    if (verificationCode.length !== 6) {
+      setError('Verification code must be 6 digits');
+      return;
+    }
+    
     try {
       setError('');
       setLoading(true);
@@ -92,12 +185,14 @@ const LoginPage = ({ theme, toggleTheme }) => {
       const { db } = await import('../config/firebase');
       const snap = await getDoc(doc(db, 'users', result.user.uid));
       const role = snap.exists() ? snap.data().role : 'user';
-      navigate(getRoleRedirect(role));
+      navigate(getRoleRedirect(role), { replace: true });
+      console.log('Phone verified, navigated to:', getRoleRedirect(role));
     } catch (err) {
-      setError('Invalid verification code.');
+      setError('Invalid verification code. Please try again.');
       console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
@@ -106,7 +201,6 @@ const LoginPage = ({ theme, toggleTheme }) => {
       <div className="auth-wrapper">
         <div className="glass auth-card">
           <Link to="/" className="auth-logo logo">
-            <img src={logo} alt="NjangiPay" className="logo-icon" />
             NjangiPay
           </Link>
           
@@ -114,13 +208,27 @@ const LoginPage = ({ theme, toggleTheme }) => {
           <p className="auth-subtitle text-sub">Log in to manage your community savings.</p>
 
           {error && <div className="error-message" style={{ color: 'red', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
+
+          {currentUser && !authLoading && (
+            <div className="info-message" style={{ color: 'var(--primary-green)', marginBottom: '1rem', textAlign: 'center' }}>
+              You are already signed in. If you want to use a different account, please log out first.
+              <button 
+                type="button" 
+                onClick={async () => { await auth.signOut(); window.location.reload(); }}
+                className="btn-secondary" 
+                style={{ marginTop: '0.75rem', width: '100%' }}
+              >
+                Log Out
+              </button>
+            </div>
+          )}
           
           <div className="auth-toggle">
             <button 
               onClick={() => { setUsePhone(false); setError(''); }} 
               className={`btn-toggle ${!usePhone ? 'active' : ''}`}
             >
-              Email
+              Username
             </button>
             <button 
               onClick={() => { setUsePhone(true); setError(''); }} 
@@ -133,17 +241,17 @@ const LoginPage = ({ theme, toggleTheme }) => {
           {!usePhone ? (
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label className="form-label" htmlFor="email">Email Address</label>
+                <label className="form-label" htmlFor="username">Username</label>
                 <div className="input-wrapper">
-                  <Mail className="input-icon" size={18} />
+                  <User className="input-icon" size={18} />
                   <input 
-                    type="email" 
-                    id="email"
-                    name="email"
+                    type="text" 
+                    id="username"
+                    name="username"
                     className="auth-input"
-                    placeholder="name@example.com" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="yourusername" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                   />
                 </div>
@@ -152,9 +260,8 @@ const LoginPage = ({ theme, toggleTheme }) => {
               <div className="form-group">
                 <label className="form-label" htmlFor="password">Password</label>
                 <div className="input-wrapper">
-                  <Lock className="input-icon" size={18} />
                   <input 
-                    type="password" 
+                    type={showPassword ? "text" : "password"} 
                     id="password"
                     name="password"
                     className="auth-input"
@@ -163,9 +270,48 @@ const LoginPage = ({ theme, toggleTheme }) => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                  <button 
+                    type="button" 
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
                 <div style={{ textAlign: 'right', marginTop: '10px' }}>
                   <span className="forgot-password">Forgot Password?</span>
+                </div>
+              </div>
+
+              <div className="verification-reminder glass-sub" style={{ padding: '15px', borderRadius: '12px', marginTop: '15px', border: '1px dashed var(--primary-green)' }}>
+                <p style={{ fontSize: '0.85rem', marginBottom: '10px', fontWeight: '500' }}>Identity Verification (Recommended)</p>
+                
+                <div className="form-group">
+                  <div className="input-wrapper">
+                    <CheckCircle className="input-icon" size={16} />
+                    <input 
+                      type="text" 
+                      className="auth-input"
+                      placeholder="Full Legal Name" 
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      style={{ fontSize: '0.9rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <div className="input-wrapper" style={{ padding: '4px' }}>
+                    <input 
+                      type="file" 
+                      className="auth-input"
+                      onChange={(e) => setIdCardFile(e.target.files[0])}
+                      accept="image/*,.pdf"
+                      style={{ padding: '6px', fontSize: '0.8rem' }}
+                    />
+                  </div>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '4px', display: 'block' }}>Upload ID Card or Passport</label>
                 </div>
               </div>
               
@@ -182,7 +328,7 @@ const LoginPage = ({ theme, toggleTheme }) => {
             <form onSubmit={codeSent ? handleVerifyCode : handlePhoneSubmit}>
               {!codeSent ? (
                 <div className="form-group">
-                  <label className="form-label" htmlFor="phoneNumber">Phone Number</label>
+                  <label className="form-label" htmlFor="phoneNumber">Phone Number (Cameroon MTN/Orange)</label>
                   <div className="input-wrapper">
                     <Phone className="input-icon" size={18} />
                     <input 
@@ -190,12 +336,15 @@ const LoginPage = ({ theme, toggleTheme }) => {
                       id="phoneNumber"
                       name="phoneNumber"
                       className="auth-input"
-                      placeholder="+1234567890" 
+                      placeholder="e.g. 650123456 or +237650123456" 
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       required
                     />
                   </div>
+                  <p className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                    Use a local MTN/Orange number, 9 digits, with optional +237 prefix.
+                  </p>
                 </div>
               ) : (
                 <div className="form-group">

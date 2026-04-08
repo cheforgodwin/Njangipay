@@ -208,7 +208,7 @@ const UserDashboard = ({ theme, toggleTheme }) => {
 
          <div className="glass card">
             <h3 style={{ marginBottom: '1.5rem' }}>Quick Actions</h3>
-          <div className="mobile-grid-2">
+          <div className="quick-actions-grid">
                <div className="flex-center" style={{ flexDirection: 'column', padding: '1.5rem', borderRadius: '15px', background: '#f0fbf4', cursor: 'pointer' }} onClick={() => navigate('/wallet')}>
                   <Plus color="var(--primary-green)" style={{ marginBottom: '0.5rem' }} />
                   <p style={{ fontSize: '0.85rem', fontWeight: '600' }}>Deposit</p>

@@ -13,7 +13,7 @@ import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 
 const CommunityChat = ({ groupId, theme }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, getUserDisplayName } = useAuth();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -61,7 +61,7 @@ const CommunityChat = ({ groupId, theme }) => {
       await addDoc(collection(db, "messages"), {
         text: inputText,
         senderId: currentUser.uid,
-        senderName: currentUser.displayName || currentUser.email.split('@')[0],
+        senderName: getUserDisplayName(),
         groupId: groupId,
         timestamp: serverTimestamp()
       });

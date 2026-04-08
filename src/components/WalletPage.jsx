@@ -231,7 +231,7 @@ const WalletPage = ({ theme, toggleTheme }) => {
                 />
               </div>
               <div style={{ padding: '1rem', background: 'var(--accent-light)', borderRadius: '12px', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
-                <p style={{ margin: 0, color: 'var(--text-sub)' }}>Processing via <strong>Nexus Secure Gateway</strong>. Funds will reflect instantly.</p>
+                <p style={{ margin: 0, color: 'var(--text-sub)' }}><strong>Secure Payment Gateway</strong>. Your funds will reflect in your wallet instantly after confirmation.</p>
               </div>
               <div className="flex gap-1" style={{ marginTop: '1rem' }}>
                 <button type="button" onClick={() => setShowDepositModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>

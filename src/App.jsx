@@ -16,6 +16,7 @@ import {
 const LandingPage = React.lazy(() => import('./components/LandingPage'));
 const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
 const Navbar = React.lazy(() => import('./components/Navbar'));
+const GroupDashboard = React.lazy(() => import('./components/GroupDashboard'));
 const ContributionTracker = React.lazy(() => import('./components/ContributionTracker'));
 const RiskAssessment = React.lazy(() => import('./components/RiskAssessment'));
 const AIAssistant = React.lazy(() => import('./components/AIAssistant'));
@@ -30,10 +31,12 @@ const SupportDashboard = React.lazy(() => import('./components/SupportDashboard'
 const InvestorAnalytics = React.lazy(() => import('./components/InvestorAnalytics'));
 const SettingsPage = React.lazy(() => import('./components/SettingsPage'));
 const PayoutRotation = React.lazy(() => import('./components/PayoutRotation'));
-const NexusSetup = React.lazy(() => import('./components/NexusSetup'));
+const AdminSetup = React.lazy(() => import('./components/AdminSetup.jsx'));
 const BankingPartners = React.lazy(() => import('./components/BankingPartners'));
 const BankDashboard = React.lazy(() => import('./components/BankDashboard'));
 const PlaceholderPage = React.lazy(() => import('./components/PlaceholderPage'));
+const RoleFix = React.lazy(() => import('./components/RoleFix'));
+const UserRoleFix = React.lazy(() => import('./components/UserRoleFix'));
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './App.css'
@@ -80,6 +83,8 @@ const ProtectedRoute = ({ children }) => {
     if (!authLoading && !currentUser) {
       console.log("ProtectedRoute: No user, redirecting to login");
       navigate('/login');
+    } else {
+      console.log("ProtectedRoute: User exists, allowing access");
     }
   }, [currentUser, authLoading, navigate]);
 
@@ -125,9 +130,11 @@ const SuperAdminRoute = ({ children }) => {
     if (!authLoading) {
       if (!currentUser) {
         navigate('/login');
-      } else if (!isSuperAdmin && currentUser?.email !== 'cheforgodwin01@gmail.com') {
-        navigate('/dashboard');
+      } else if (isSuperAdmin || currentUser?.email === 'cheforgodwin01@gmail.com') {
+        // User has proper role, allow access without password
+        setIsAuthorized(true);
       }
+      // If user doesn't have role, they need to enter password
     }
   }, [currentUser, userData, isSuperAdmin, navigate, authLoading]);
 
@@ -141,38 +148,40 @@ const SuperAdminRoute = ({ children }) => {
   };
 
   if (authLoading) return <LoadingSpinner />;
-  if (!currentUser || (!isSuperAdmin && currentUser.email !== 'cheforgodwin01@gmail.com')) return <LoadingSpinner />;
+  if (!currentUser) return <LoadingSpinner />;
 
-  if (!isAuthorized) {
-    return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', 
-        alignItems: 'center', justifyContent: 'center', background: 'var(--off-white)'
-      }}>
-        <div className="glass card" style={{ padding: '2rem', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
-          <ShieldCheck size={48} color="var(--primary-green)" style={{ marginBottom: '1rem' }} />
-          <h2 style={{ color: 'var(--primary-green)', marginBottom: '1rem' }}>Restricted Access</h2>
-          <p className="text-sub" style={{ marginBottom: '1.5rem' }}>Please enter the Super Admin override password to access this dashboard.</p>
-          <form onSubmit={handlePasswordSubmit}>
-            <input 
-              type="password" 
-              className="auth-input"
-              style={{ width: '100%', marginBottom: '1rem' }}
-              placeholder="Enter password..."
-              value={passwordInput}
-              onChange={(e) => { setPasswordInput(e.target.value); setError(''); }}
-              autoFocus
-            />
-            {error && <p style={{ color: 'red', fontSize: '0.85rem', marginBottom: '1rem' }}>{error}</p>}
-            <button type="submit" className="btn-primary" style={{ width: '100%' }}>Access Dashboard</button>
-            <button type="button" className="btn-secondary" style={{ width: '100%', marginTop: '10px' }} onClick={() => navigate('/dashboard')}>Back to Safety</button>
-          </form>
-        </div>
-      </div>
-    );
+  // Allow access if user has super-admin role OR has entered correct password
+  if (isAuthorized || isSuperAdmin || currentUser?.email === 'cheforgodwin01@gmail.com') {
+    return children;
   }
 
-  return children;
+  // Show password prompt for users without super-admin role
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', 
+      alignItems: 'center', justifyContent: 'center', background: 'var(--off-white)'
+    }}>
+      <div className="glass card" style={{ padding: '2rem', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
+        <ShieldCheck size={48} color="var(--primary-green)" style={{ marginBottom: '1rem' }} />
+        <h2 style={{ color: 'var(--primary-green)', marginBottom: '1rem' }}>Restricted Access</h2>
+        <p className="text-sub" style={{ marginBottom: '1.5rem' }}>Please enter the Super Admin override password to access this dashboard.</p>
+        <form onSubmit={handlePasswordSubmit}>
+          <input 
+            type="password" 
+            className="auth-input"
+            style={{ width: '100%', marginBottom: '1rem' }}
+            placeholder="Enter password..."
+            value={passwordInput}
+            onChange={(e) => { setPasswordInput(e.target.value); setError(''); }}
+            autoFocus
+          />
+          {error && <p style={{ color: 'red', fontSize: '0.85rem', marginBottom: '1rem' }}>{error}</p>}
+          <button type="submit" className="btn-primary" style={{ width: '100%' }}>Access Dashboard</button>
+          <button type="button" className="btn-secondary" style={{ width: '100%', marginTop: '10px' }} onClick={() => navigate('/dashboard')}>Back to Safety</button>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 const BankRoute = ({ children }) => {
@@ -265,54 +274,62 @@ function App() {
             <Route path="/groups" element={<ProtectedRoute><GroupsPage theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
             <Route path="/marketplace" element={<ProtectedRoute><Marketplace theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
             <Route path="/admin/communities" element={<AdminRoute><AdminPanel theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
-            <Route path="/group/:groupId/contributions" element={<ProtectedRoute><ContributionTracker theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+            <Route path="/group/:groupId" element={<ProtectedRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+            <Route path="/group/:groupId/dashboard" element={<ProtectedRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+            <Route path="/group/:groupId/contributions" element={<ProtectedRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+            <Route path="/group/:groupId/members" element={<ProtectedRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+            <Route path="/group/:groupId/rotation" element={<ProtectedRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+            <Route path="/group/:groupId/loans" element={<ProtectedRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+            <Route path="/group/:groupId/meetings" element={<ProtectedRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+            <Route path="/group/:groupId/audit" element={<ProtectedRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+            <Route path="/group/:groupId/reports" element={<ProtectedRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
             <Route path="/admin/ai-risk-scores" element={<AdminRoute><RiskAssessment theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
-            <Route path="/super-admin" element={<SuperAdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} /></SuperAdminRoute>} />
-            <Route path="/superadmin" element={<SuperAdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} /></SuperAdminRoute>} />
+            <Route path="/super-admin" element={<SuperAdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="overview" /></SuperAdminRoute>} />
+            <Route path="/superadmin" element={<SuperAdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="overview" /></SuperAdminRoute>} />
 
             <Route path="/support" element={<ProtectedRoute><SupportDashboard theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
             <Route path="/investor" element={<ProtectedRoute><InvestorAnalytics theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
-            <Route path="/setup-nexus" element={<NexusSetup />} />
+            <Route path="/setup-admin" element={<AdminSetup />} />
             <Route path="/partners" element={<ProtectedRoute><BankingPartners theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
             <Route path="/bank-dashboard" element={<BankRoute><BankDashboard theme={theme} toggleTheme={toggleTheme} /></BankRoute>} />
 
-            {/* NEW MISSING ADMIN ROUTES */}
-            <Route path="/admin/users" element={<AdminRoute><PlaceholderPage title="Manage Users" theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
-            <Route path="/admin/groups" element={<AdminRoute><PlaceholderPage title="Manage Groups" theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
-            <Route path="/admin/transactions" element={<AdminRoute><PlaceholderPage title="Transactions" theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
-            <Route path="/admin/payments" element={<AdminRoute><PlaceholderPage title="Payments (MoMo)" theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
-            <Route path="/admin/loans" element={<AdminRoute><PlaceholderPage title="Loan Management" theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
-            <Route path="/admin/reports" element={<AdminRoute><PlaceholderPage title="Reports & Analytics" theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
-            <Route path="/admin/audit" element={<AdminRoute><PlaceholderPage title="Audit Logs" theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
-            <Route path="/admin/fraud" element={<AdminRoute><PlaceholderPage title="Fraud Detection" theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
-            <Route path="/admin/settings" element={<AdminRoute><PlaceholderPage title="Platform Config" theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
-            <Route path="/admin/integrations" element={<AdminRoute><PlaceholderPage title="Integrations" theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
-            <Route path="/admin/alerts" element={<AdminRoute><PlaceholderPage title="Notifications" theme={theme} toggleTheme={toggleTheme} /></AdminRoute>} />
+            {/* LIVE ADMIN ROUTES */}
+            <Route path="/admin/users" element={<AdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="users" /></AdminRoute>} />
+            <Route path="/admin/communities" element={<AdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="groups" /></AdminRoute>} />
+            <Route path="/admin/transactions" element={<AdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="activity" /></AdminRoute>} />
+            <Route path="/admin/payments" element={<AdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="activity" /></AdminRoute>} />
+            <Route path="/admin/loans" element={<AdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="settings" /></AdminRoute>} />
+            <Route path="/admin/reports" element={<AdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="activity" /></AdminRoute>} />
+            <Route path="/admin/audit" element={<AdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="audits" /></AdminRoute>} />
+            <Route path="/admin/fraud" element={<AdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="audits" /></AdminRoute>} />
+            <Route path="/admin/settings" element={<AdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="settings" /></AdminRoute>} />
+            <Route path="/admin/integrations" element={<AdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="settings" /></AdminRoute>} />
+            <Route path="/admin/alerts" element={<AdminRoute><SuperAdminDashboard theme={theme} toggleTheme={toggleTheme} initialTab="overview" /></AdminRoute>} />
 
-            {/* LEADER ROUTES */}
-            <Route path="/leader/group" element={<LeaderRoute><PlaceholderPage title="My Group" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
+            {/* GROUP LEADER ROUTES */}
+            <Route path="/leader" element={<LeaderRoute><PlaceholderPage title="Leader Dashboard" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
+            <Route path="/leader/group" element={<LeaderRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
             <Route path="/leader/members" element={<LeaderRoute><PlaceholderPage title="Group Members" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
-            <Route path="/leader/contributions" element={<LeaderRoute><PlaceholderPage title="Contributions" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
+            <Route path="/leader/contributions" element={<LeaderRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
             <Route path="/leader/schedule" element={<LeaderRoute><PlaceholderPage title="Schedule" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
             <Route path="/leader/rotation" element={<LeaderRoute><PayoutRotation theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
             <Route path="/leader/disbursements" element={<LeaderRoute><PlaceholderPage title="Disbursements" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
-            <Route path="/leader/loan-requests" element={<LeaderRoute><PlaceholderPage title="Loan Requests" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
+            <Route path="/leader/loan-requests" element={<LeaderRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
             <Route path="/leader/loan-tracking" element={<LeaderRoute><PlaceholderPage title="Active Loans" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
             <Route path="/leader/announcements" element={<LeaderRoute><PlaceholderPage title="Chat & Notices" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
             <Route path="/leader/notifications" element={<LeaderRoute><PlaceholderPage title="Notifications" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
-            <Route path="/leader/reports" element={<LeaderRoute><PlaceholderPage title="Group Reports" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
+            <Route path="/leader/reports" element={<LeaderRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
             <Route path="/leader/settings" element={<LeaderRoute><PlaceholderPage title="Group Settings" theme={theme} toggleTheme={toggleTheme} /></LeaderRoute>} />
 
             {/* AUDITOR ROUTES */}
-            <Route path="/auditor" element={<AuditorRoute><PlaceholderPage title="Auditor Dashboard" theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
-            <Route path="/auditor/transactions" element={<AuditorRoute><PlaceholderPage title="Transaction Logs" theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
-            <Route path="/auditor/contributions" element={<AuditorRoute><PlaceholderPage title="Contribution Logs" theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
-            <Route path="/auditor/payouts" element={<AuditorRoute><PlaceholderPage title="Payout Verification" theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
-            <Route path="/auditor/reports" element={<AuditorRoute><PlaceholderPage title="Financial Reports" theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
-            <Route path="/auditor/audit" element={<AuditorRoute><PlaceholderPage title="Audit Reports" theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
-            <Route path="/auditor/discrepancies" element={<AuditorRoute><PlaceholderPage title="Discrepancies" theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
-            <Route path="/auditor/fraud" element={<AuditorRoute><PlaceholderPage title="Fraud Checks" theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
+            <Route path="/auditor" element={<AuditorRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
+            <Route path="/auditor/transactions" element={<AuditorRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
+            <Route path="/auditor/contributions" element={<AuditorRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
+            <Route path="/auditor/payouts" element={<AuditorRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
+            <Route path="/auditor/audit" element={<AuditorRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
+            <Route path="/auditor/discrepancies" element={<AuditorRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
+            <Route path="/auditor/fraud" element={<AuditorRoute><GroupDashboard theme={theme} toggleTheme={toggleTheme} /></AuditorRoute>} />
 
             {/* SHARED ROUTES (Member/General) */}
             <Route path="/messages" element={<ProtectedRoute><PlaceholderPage title="Group Chat" theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
@@ -323,6 +340,16 @@ function App() {
         {/* Load heavy AI Assistant only after initial render and only on internal pages */}
         <React.Suspense fallback={null}>
           {theme && shouldShowAI && <AIAssistant />}
+        </React.Suspense>
+        
+        {/* Role Fix Tool for Super Admin */}
+        <React.Suspense fallback={null}>
+          <RoleFix />
+        </React.Suspense>
+        
+        {/* User Role Fix Tool for Super Admin */}
+        <React.Suspense fallback={null}>
+          <UserRoleFix />
         </React.Suspense>
       </div>
     </AuthProvider>

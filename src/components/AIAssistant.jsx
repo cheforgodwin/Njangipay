@@ -79,25 +79,29 @@ const AIAssistant = () => {
 
   const callGeminiAI = async (userQuery) => {
     try {
-      // Primary: Use the secure Cloud Function
-      const getAiResponse = httpsCallable(functions, 'getAiResponse');
-      const result = await getAiResponse({ query: userQuery });
+      // 1. Primary Method: Use your new Vercel Serverless Function (No Blaze Plan Required!)
+      const res = await fetch('/api/getAiResponse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: userQuery })
+      });
       
-      if (result.data.error) throw new Error(result.data.error);
-      return result.data.text || "I was unable to process that. Could you rephrase?";
+      if (res.ok) {
+        const data = await res.json();
+        return data.text || "I was unable to process that. Could you rephrase?";
+      }
+      throw new Error(`API_ERROR_${res.status}`);
     } catch (error) {
-      console.warn("Cloud Function failed, trying direct frontend fallback:", error);
+      console.warn("Vercel API failed, trying direct frontend fallback:", error);
       
-      // Fallback: If Cloud Function isn't deployed yet, use the frontend key directly
+      // 2. Fallback: Direct frontend call (uses your VITE_AI_API_KEY)
       if (!frontendApiKey) {
-        throw new Error("AI Backend is unconfigured (missing VITE_AI_API_KEY).");
+        throw new Error("AI Backend unconfigured. Please check Vercel environment variables.");
       }
 
-      const prompt = `You are the elite NjangiPay Financial AI Expert. NjangiPay is a smart community savings and lending platform. 
-      Rules: Concise (under 3 sentences), professional, cite features like Marketplace/Group Savings.
-      Goal: ${userQuery}`;
+      const prompt = `Role: NjangiPay Expert. Concise (3 sentences). ${userQuery}`;
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${frontendApiKey}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${frontendApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -107,7 +111,7 @@ const AIAssistant = () => {
       if (!res.ok) throw new Error(`API_ERROR_${res.status}`);
 
       const data = await res.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || "I was unable to process that. Could you rephrase?";
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || "Response unavailable. Try one more time?";
     }
   };
 

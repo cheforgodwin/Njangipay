@@ -22,7 +22,60 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const signup = async (email, password, phoneNumber = '', extraData = {}) => {
+  const normalizeUserIdentifier = (identifier) => {
+    const trimVal = (identifier || '').toString().trim();
+    if (!trimVal) return '';
+
+    if (trimVal.includes('@')) {
+      return trimVal.toLowerCase();
+    }
+
+    const sanitized = trimVal
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]/g, '.')
+      .replace(/\.+/g, '.')
+      .replace(/^\.|\.$/g, '');
+
+    return sanitized ? `${sanitized}@local.njangipay` : '';
+  };
+
+  const normalizeCameroonPhone = (rawPhone) => {
+    if (!rawPhone || !rawPhone.toString().trim()) return '';
+    let digits = rawPhone.toString().replace(/[^0-9+]/g, '');
+
+    if (digits.startsWith('+')) {
+      digits = digits.slice(1);
+    }
+
+    if (digits.startsWith('237')) {
+      digits = digits.slice(3);
+    } else if (digits.startsWith('0')) {
+      digits = digits.slice(1);
+    }
+
+    // Cameroon mobile numbers are 9 digits and start with 6.
+    if (digits.length !== 9 || !digits.startsWith('6')) {
+      throw new Error('Invalid Cameroon phone number. Use MTN/Orange format like 6XXXXXXXX.');
+    }
+
+    // Optional check for MTN/Orange prefix ranges
+    const prefix = Number(digits.slice(0, 2));
+    const validRanges = [65,66,67,68,69,70,71,72,73,74,75,76,77,78,79];
+    if (!validRanges.includes(prefix)) {
+      throw new Error('Phone must be a valid Cameroon MTN/Orange mobile number.');
+    }
+
+    return `+237${digits}`;
+  };
+
+  const signup = async (usernameOrEmail, password, phoneNumber = '', extraData = {}) => {
+    const email = normalizeUserIdentifier(usernameOrEmail);
+    let normalizedPhone = '';
+
+    if (phoneNumber) {
+      normalizedPhone = normalizeCameroonPhone(phoneNumber);
+    }
+
     const res = await createUserWithEmailAndPassword(auth, email, password);
     
     // Send email verification for "real email" security
@@ -35,11 +88,16 @@ export const AuthProvider = ({ children }) => {
     // Initialize Firestore user doc
     await setDoc(doc(db, "users", res.user.uid), {
       uid: res.user.uid,
+      username: extraData.username || usernameOrEmail,
       email,
-      phoneNumber,
+      phoneNumber: normalizedPhone,
       role: email === 'cheforgodwin01@gmail.com' ? 'super-admin' : (
-        extraData.accountType === 'community' ? 'admin' : 
-        extraData.accountType === 'bank' ? 'bank-admin' : 'user'
+        extraData.accountType === 'community' ? 'community' : 
+        extraData.accountType === 'bank' ? 'bank-admin' :
+        extraData.accountType === 'admin' ? 'admin' :
+        extraData.accountType === 'community-admin' ? 'community-admin' :
+        extraData.accountType === 'leader' ? 'leader' :
+        extraData.accountType === 'auditor' ? 'auditor' : 'user'
       ),
       emailVerified: false,
       createdAt: new Date().toISOString(),
@@ -48,7 +106,8 @@ export const AuthProvider = ({ children }) => {
     return res;
   };
 
-  const login = (email, password) => {
+  const login = (usernameOrEmail, password) => {
+    const email = normalizeUserIdentifier(usernameOrEmail);
     return signInWithEmailAndPassword(auth, email, password);
   };
 
@@ -86,7 +145,8 @@ export const AuthProvider = ({ children }) => {
   }
 
   function phoneSignIn(phoneNumber, appVerifier) {
-    return signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+    const normalized = normalizeCameroonPhone(phoneNumber);
+    return signInWithPhoneNumber(auth, normalized, appVerifier);
   }
 
   useEffect(() => {
@@ -126,6 +186,8 @@ export const AuthProvider = ({ children }) => {
 
   const getUserDisplayName = () => {
     if (!currentUser) return 'Guest';
+    if (userData?.username) return userData.username;
+    if (userData?.fullName) return userData.fullName;
     if (currentUser.displayName) return currentUser.displayName;
     if (currentUser.email) return currentUser.email.split('@')[0];
     if (currentUser.phoneNumber) return currentUser.phoneNumber;
@@ -135,11 +197,13 @@ export const AuthProvider = ({ children }) => {
   const value = {
     currentUser,
     userData,
-    isAdmin: userData?.role === 'admin' || userData?.role === 'super-admin',
+    isAdmin: userData?.role === 'admin' || userData?.role === 'super-admin' || userData?.role === 'community-admin',
     isSuperAdmin: userData?.role === 'super-admin' || currentUser?.email === 'cheforgodwin01@gmail.com',
     isBankAdmin: userData?.role === 'bank-admin' || userData?.role === 'super-admin',
-    isLeader: userData?.role === 'leader' || userData?.role === 'admin' || userData?.role === 'super-admin',
-    isAuditor: userData?.role === 'auditor' || userData?.role === 'admin' || userData?.role === 'super-admin',
+    isLeader: userData?.role === 'leader' || userData?.role === 'admin' || userData?.role === 'community-admin' || userData?.role === 'super-admin',
+    isAuditor: userData?.role === 'auditor' || userData?.role === 'admin' || userData?.role === 'community-admin' || userData?.role === 'super-admin',
+    isCommunity: userData?.role === 'community',
+    isCommunityAdmin: userData?.role === 'community-admin',
     signup,
     login,
     logout,
@@ -148,7 +212,29 @@ export const AuthProvider = ({ children }) => {
     setupRecaptcha,
     phoneSignIn,
     getUserDisplayName,
-    loading
+    loading,
+    // Helper function to check if user is leader of a specific group
+    isGroupLeader: async (groupId) => {
+      if (!currentUser) return false;
+      if (userData?.role === 'super-admin' || userData?.role === 'admin' || userData?.role === 'community-admin') return true;
+      
+      try {
+        const { doc, getDoc, collection, query, where } = await import('firebase/firestore');
+        const membersRef = collection(db, "members");
+        const q = query(membersRef, where("user_id", "==", currentUser.uid), where("group_id", "==", groupId));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const memberDoc = querySnapshot.docs[0];
+          const memberData = memberDoc.data();
+          return memberData.role === 'leader' || memberData.role === 'admin';
+        }
+        return false;
+      } catch (error) {
+        console.error("Error checking group leader status:", error);
+        return false;
+      }
+    }
   };
 
   return (

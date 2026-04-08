@@ -19,11 +19,13 @@ const Navbar = ({ theme, toggleTheme, showLogo = true }) => {
 
   return (
     <nav className="app-navbar">
-      {showLogo && (
+      {showLogo ? (
         <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
           <img src={logo} alt="NjangiPay" className="logo-icon" />
           NjangiPay
         </div>
+      ) : (
+        <div className="navbar-logo-spacer" style={{ flex: 1 }}></div>
       )}
       
       <div className={`nav-links ${isMenuOpen ? 'mobile-active' : ''}`}>
